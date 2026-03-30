@@ -98,6 +98,7 @@ const IDX=[
 
 let port=J('st-port',[]),txs=J('st-tx',[]),watch=J('st-watch',[]),sim=J('st-sim',{cash:SIM_CASH,holdings:[],startDate:ds(),startCash:SIM_CASH}),simTx=J('st-simtx',[]);
 let prices={},idxData={},view='market',sub=null,sel=null,aRes='',aLoad=false,lastUp=null,autoOn=true,searchRes=[],timer=null;
+let chartData=null,chartRange='6mo',chartInterval='1d',chartLoading=false;
 
 function J(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}}
 function SV(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
@@ -136,6 +137,78 @@ function startAuto(){if(timer)clearInterval(timer);if(autoOn){refreshAll();timer
 
 // ── AI ──
 async function runAI(sym,name,tid){
+
+// ── CHART ──
+async function loadChart(sym,range,interval){
+  chartLoading=true;chartData=null;chartRange=range;chartInterval=interval;render();
+  try{const r=await fetch(W+'?s='+encodeURIComponent(norm(sym))+'&action=chart&range='+range+'&interval='+interval);const d=await r.json();if(d&&d.bars)chartData=d;else chartData=null}catch(e){chartData=null}
+  chartLoading=false;render();
+  setTimeout(()=>drawChart(),50);
+}
+function drawChart(){
+  const cv=document.getElementById('chartCv');if(!cv||!chartData||!chartData.bars.length)return;
+  const ctx=cv.getContext('2d'),dpr=window.devicePixelRatio||1;
+  const W2=cv.parentElement.clientWidth,H=260,VH=50;
+  cv.width=W2*dpr;cv.height=H*dpr;cv.style.width=W2+'px';cv.style.height=H+'px';
+  ctx.scale(dpr,dpr);
+  const bars=chartData.bars,len=bars.length;
+  const bw=Math.max(1,Math.floor((W2-40)/len)-1),gap=1;
+  const prices2=bars.map(b=>[b.h,b.l]).flat().filter(v=>v!=null);
+  const pMax=Math.max(...prices2),pMin=Math.min(...prices2);
+  const vMax=Math.max(...bars.map(b=>b.v))||1;
+  const pH=H-VH-20,pTop=10;
+  const py=(p)=>pTop+pH-(p-pMin)/(pMax-pMin)*pH;
+  const vy=(v)=>H-v/vMax*VH;
+
+  // Background
+  ctx.fillStyle='#0e1525';ctx.fillRect(0,0,W2,H);
+
+  // Grid lines
+  ctx.strokeStyle='#1a2744';ctx.lineWidth=0.5;
+  for(let i=0;i<=4;i++){const y=pTop+pH*i/4;ctx.beginPath();ctx.moveTo(30,y);ctx.lineTo(W2,y);ctx.stroke();
+    const pv=pMax-(pMax-pMin)*i/4;ctx.fillStyle='#3d4f6f';ctx.font='9px sans-serif';ctx.textAlign='left';ctx.fillText(pv>=1000?Math.round(pv).toLocaleString():pv.toFixed(2),0,y+3)}
+
+  // MA lines
+  const ma=(n)=>{const r=[];for(let i=0;i<len;i++){if(i<n-1){r.push(null);continue}let s=0;for(let j=i-n+1;j<=i;j++)s+=bars[j].c;r.push(s/n)}return r};
+  const drawMa=(n,color)=>{const m=ma(n);ctx.strokeStyle=color;ctx.lineWidth=1;ctx.beginPath();let started=false;
+    for(let i=0;i<len;i++){if(m[i]==null)continue;const x=30+(bw+gap)*i+bw/2,y=py(m[i]);if(!started){ctx.moveTo(x,y);started=true}else ctx.lineTo(x,y)}ctx.stroke()};
+  if(len>=5)drawMa(5,'#ffa502');
+  if(len>=20)drawMa(20,'#4dabf7');
+  if(len>=60)drawMa(60,'#a29bfe');
+
+  // Candles + Volume
+  for(let i=0;i<len;i++){
+    const b=bars[i],x=30+(bw+gap)*i;
+    const up=b.c>=b.o,col=up?'#00e8a2':'#ff4d6a';
+    // Volume bar
+    ctx.fillStyle=up?'rgba(0,232,162,0.3)':'rgba(255,77,106,0.3)';
+    ctx.fillRect(x,vy(b.v),bw,H-vy(b.v));
+    // Wick
+    ctx.strokeStyle=col;ctx.lineWidth=1;ctx.beginPath();
+    ctx.moveTo(x+bw/2,py(b.h));ctx.lineTo(x+bw/2,py(b.l));ctx.stroke();
+    // Body
+    ctx.fillStyle=col;
+    const oY=py(b.o),cY=py(b.c);
+    const bodyH=Math.max(1,Math.abs(cY-oY));
+    ctx.fillRect(x,Math.min(oY,cY),bw,bodyH);
+  }
+
+  // MA legend
+  ctx.font='9px sans-serif';
+  const legends=[{n:'MA5',c:'#ffa502'},{n:'MA20',c:'#4dabf7'},{n:'MA60',c:'#a29bfe'}];
+  let lx=35;
+  legends.forEach(l=>{ctx.fillStyle=l.c;ctx.fillRect(lx,H-12,8,8);ctx.fillStyle='#7b8db5';ctx.fillText(l.n,lx+10,H-5);lx+=45});
+}
+
+// Chart period configs
+const CHART_PERIODS=[
+  {label:'日K',range:'6mo',interval:'1d'},
+  {label:'週K',range:'2y',interval:'1wk'},
+  {label:'月K',range:'10y',interval:'1mo'},
+  {label:'5分',range:'1d',interval:'5m'},
+  {label:'15分',range:'5d',interval:'15m'},
+  {label:'60分',range:'1mo',interval:'60m'},
+];
   aLoad=true;aRes='';view='analysis';render();
   const h=port.find(s=>s.symbol===sym);const p=prices[norm(sym)];
   const ctx=`持倉：${h?h.shares+'股均'+h.avgCost:'未持有'}\n${p?'即時價'+p.price+' 漲跌'+p.change+'('+p.changePct+'%) 量'+(p.volume||0)+' 52W高'+p.fiftyTwoWeekHigh+' 低'+p.fiftyTwoWeekLow:''}`;
@@ -187,6 +260,7 @@ function render(){
   // Restore input values
   Object.entries(sv).forEach(([id,val])=>{const el=document.getElementById(id);if(el&&val)el.value=val});
   if(af){const el=document.getElementById(af);if(el)el.focus()}
+  if(view==='detail'&&chartData)setTimeout(drawChart,50);
 }
 function nav(v){view=v;sub=null;searchRes=[];render()}
 
@@ -262,7 +336,7 @@ function vPort(){
 
   if(!port.length)h+=`<div style="text-align:center;padding:40px;color:var(--t3)"><div style="font-size:36px;margin-bottom:8px">📊</div><div style="font-size:13px;font-weight:600">點「+」開始</div></div>`;
   else port.forEach(s=>{const n=norm(s.symbol),p=prices[n],cur=p?.price||s.avgCost,pl2=(cur-s.avgCost)*s.shares,up=pl2>=0;
-    h+=`<div class="cd" style="cursor:pointer" onclick="sel='${s.symbol}';view='detail';sub=null;render()"><div style="display:flex;justify-content:space-between"><div><div style="display:flex;align-items:center;gap:6px"><span style="font-size:14px;font-weight:700">${s.symbol}</span><span class="pl" style="color:${SECTORS[s.sector]||'var(--t3)'};background:${(SECTORS[s.sector]||'var(--t3)')+'22'}">${s.sector}</span>${p?.marketState==='REGULAR'?'<span style="width:5px;height:5px;border-radius:50%;background:var(--ac);display:inline-block"></span>':''}</div><div style="font-size:10px;color:var(--t2);margin-top:2px">${s.name}</div><div style="font-size:10px;color:var(--t3);margin-top:3px">${fmtI(s.shares)}股·均${fmt(s.avgCost)}</div></div><div style="text-align:right"><div style="font-size:16px;font-weight:800">${fmt(cur)}</div>${p?`<div style="font-size:10px;color:${p.changePct>=0?'var(--ac)':'var(--red)'};font-weight:600">${p.changePct>=0?'▲':'▼'}${Math.abs(p.changePct).toFixed(2)}%</div>`:''}<div style="font-size:12px;font-weight:700;color:${up?'var(--ac)':'var(--red)'};margin-top:2px">${up?'+':''}${fmtK(pl2)}</div></div></div></div>`;
+    h+=`<div class="cd" style="cursor:pointer" onclick="sel='${s.symbol}';view='detail';sub=null;chartData=null;render();loadChart('${s.symbol}','6mo','1d')"><div style="display:flex;justify-content:space-between"><div><div style="display:flex;align-items:center;gap:6px"><span style="font-size:14px;font-weight:700">${s.symbol}</span><span class="pl" style="color:${SECTORS[s.sector]||'var(--t3)'};background:${(SECTORS[s.sector]||'var(--t3)')+'22'}">${s.sector}</span>${p?.marketState==='REGULAR'?'<span style="width:5px;height:5px;border-radius:50%;background:var(--ac);display:inline-block"></span>':''}</div><div style="font-size:10px;color:var(--t2);margin-top:2px">${s.name}</div><div style="font-size:10px;color:var(--t3);margin-top:3px">${fmtI(s.shares)}股·均${fmt(s.avgCost)}</div></div><div style="text-align:right"><div style="font-size:16px;font-weight:800">${fmt(cur)}</div>${p?`<div style="font-size:10px;color:${p.changePct>=0?'var(--ac)':'var(--red)'};font-weight:600">${p.changePct>=0?'▲':'▼'}${Math.abs(p.changePct).toFixed(2)}%</div>`:''}<div style="font-size:12px;font-weight:700;color:${up?'var(--ac)':'var(--red)'};margin-top:2px">${up?'+':''}${fmtK(pl2)}</div></div></div></div>`;
   });
   return h;
 }
@@ -292,10 +366,12 @@ function vDetail(){
   if(sub==='sell')return`<div style="padding:0 12px"><button class="back" onclick="sub=null;render()">←</button><div class="cd" style="background:var(--redD);border-color:rgba(255,77,106,.2)"><div style="font-size:14px;font-weight:700;color:var(--red);margin-bottom:10px">📤 賣出 ${stock.symbol}</div><div style="margin-bottom:8px"><label class="lb">股數 (≤${fmtI(stock.shares)})</label><input class="inp" id="slSh" type="number"></div><div style="margin-bottom:8px"><label class="lb">價格</label><input class="inp" id="slPr" type="number" value="${cur}"></div><div style="margin-bottom:8px"><label class="lb">備註</label><input class="inp" id="slNo"></div><button class="btn" style="background:var(--red);color:#fff;width:100%" onclick="doSell('${stock.symbol}')">確認賣出</button></div></div>`;
   if(sub==='pickA')return`<div style="padding:0 12px"><button class="back" onclick="sub=null;render()">←</button><div style="font-size:14px;font-weight:700;margin-bottom:10px">🤖 分析 ${stock.symbol}</div>${ATPL.map(t=>`<div class="cd" style="cursor:pointer" onclick="sub=null;runAI('${stock.symbol}','${stock.name}','${t.id}')"><div style="font-size:13px;font-weight:700">${t.l}</div></div>`).join('')}</div>`;
   const stx=txs.filter(t=>t.symbol===stock.symbol).slice(0,8);
-  return`<div style="padding:0 12px"><button class="back" onclick="nav('portfolio')">←</button>
+  const chartHtml=`<div class="cd" style="padding:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:12px;font-weight:700">📈 走勢圖</div><div style="display:flex;gap:3px">${CHART_PERIODS.map(p=>`<button class="btn" style="padding:3px 7px;font-size:9px;border-radius:6px;background:${chartRange===p.range&&chartInterval===p.interval?'var(--acD)':'#111827'};color:${chartRange===p.range&&chartInterval===p.interval?'var(--ac)':'var(--t3)'}" onclick="loadChart('${stock.symbol}','${p.range}','${p.interval}')">${p.label}</button>`).join('')}</div></div>${chartLoading?'<div style="text-align:center;padding:30px;color:var(--t2);font-size:11px">載入中...</div>':chartData?'<canvas id="chartCv" style="width:100%;border-radius:8px"></canvas>':'<div style="text-align:center;padding:20px;color:var(--t3);font-size:11px">點擊上方按鈕載入走勢圖</div>'}</div>`;
+  return`<div style="padding:0 12px"><button class="back" onclick="chartData=null;nav('portfolio')">←</button>
   <div class="cd"><div style="display:flex;justify-content:space-between"><div><div style="font-size:20px;font-weight:800">${stock.symbol}</div><div style="font-size:11px;color:var(--t2)">${stock.name}</div></div><div style="text-align:right"><div style="font-size:22px;font-weight:800">${fmt(cur)}</div>${p?`<div style="font-size:11px;color:${p.changePct>=0?'var(--ac)':'var(--red)'}">${p.changePct>=0?'+':''}${fmt(p.change)} (${pct(p.changePct)})</div>`:''}</div></div>
   <div class="g3" style="margin-top:10px">${[{l:'股數',v:fmtI(stock.shares)},{l:'均價',v:fmt(stock.avgCost)},{l:'市值',v:fmtK(cur*stock.shares)},...(p?.high?[{l:'今高',v:fmt(p.high)}]:[]),...(p?.low?[{l:'今低',v:fmt(p.low)}]:[]),...(p?.volume?[{l:'量',v:fmtI(p.volume)}]:[]),...(p?.fiftyTwoWeekHigh?[{l:'52W高',v:fmt(p.fiftyTwoWeekHigh)}]:[]),...(p?.fiftyTwoWeekLow?[{l:'52W低',v:fmt(p.fiftyTwoWeekLow)}]:[])].map(d=>`<div class="stat"><div class="sl">${d.l}</div><div class="sv">${d.v}</div></div>`).join('')}</div>
   <div style="margin-top:8px;padding:6px 10px;border-radius:8px;background:${up?'var(--acD)':'var(--redD)'};text-align:center"><span style="font-size:15px;font-weight:800;color:${up?'var(--ac)':'var(--red)'}">${up?'+':''}${fmt(pl2)} (${pct(plP)})</span></div></div>
+  ${chartHtml}
   <div class="g2" style="margin:0 0 8px"><button class="btn" style="background:var(--bluD);color:var(--blu)" onclick="sub='pickA';render()">🤖 AI分析</button><button class="btn" style="background:var(--redD);color:var(--red)" onclick="sub='sell';render()">📤 賣出</button></div>
   <div style="font-size:12px;font-weight:700;margin:10px 0 6px">📜 紀錄</div>${stx.map(txRow).join('')}</div>`;
 }
