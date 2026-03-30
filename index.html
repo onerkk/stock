@@ -97,6 +97,10 @@ const IDX=[
 ];
 
 let port=J('st-port',[]),txs=J('st-tx',[]),watch=J('st-watch',[]),sim=J('st-sim',{cash:SIM_CASH,holdings:[],startDate:ds(),startCash:SIM_CASH}),simTx=J('st-simtx',[]);
+
+// 台股中文名稱（常用）
+const TW_NAME={'2330':'台積電','2317':'鴻海','2454':'聯發科','2308':'台達電','2881':'富邦金','2882':'國泰金','2891':'中信金','2886':'兆豐金','2884':'玉山金','2880':'華南金','2303':'聯電','3711':'日月光投控','2412':'中華電','1301':'台塑','1303':'南亞','1326':'台化','2002':'中鋼','2912':'統一超','2885':'元大金','3008':'大立光','2357':'華碩','2382':'廣達','2395':'研華','6505':'台塑化','2207':'和泰車','5880':'合庫金','5876':'上海商銀','2892':'第一金','2887':'台新金','1101':'台泥','1102':'亞泥','2105':'正新','9910':'豐泰','2801':'彰銀','2301':'光寶科','3045':'台灣大','4904':'遠傳','2327':'國巨','3034':'聯詠','2379':'瑞昱','6669':'緯穎','3037':'欣興','2345':'智邦','5269':'祥碩','3661':'世芯','6415':'矽力','2603':'長榮','2615':'萬海','2609':'陽明','0050':'元大台灣50','0056':'元大高股息','00878':'國泰永續高股息','00919':'群益台灣精選高息','00929':'復華台灣科技優息','006208':'富邦台50'};
+function twName(sym){const code=sym.replace(/\.TW$/i,'');return TW_NAME[code]||null}
 let prices={},idxData={},view='market',sub=null,sel=null,aRes='',aLoad=false,lastUp=null,autoOn=true,searchRes=[],timer=null;
 let chartData=null,chartRange='6mo',chartInterval='1d',chartLoading=false;
 
@@ -360,7 +364,8 @@ function autoFill(val){
     _addTimer=setTimeout(async()=>{
       const p=await fetchOne(val);
       if(p&&!p.error){
-        const nm=document.getElementById('addNm');if(nm&&!nm.value)nm.value=p.name||'';
+        const cn=twName(p.symbol)||p.name||'';
+        const nm=document.getElementById('addNm');if(nm&&!nm.value)nm.value=cn;
         const pr=document.getElementById('addPr');if(pr&&!pr.value)pr.value=p.price||'';
       }
     },800);
@@ -380,8 +385,8 @@ function vAdd(){
 }
 let _sec='其他';
 function pickSec(el,s){_sec=s;document.querySelectorAll('#addSec button').forEach(b=>{const n=b.textContent;b.style.background=n===s?(SECTORS[n]||'#ddd')+'33':'#111827';b.style.color=n===s?(SECTORS[n]||'#ddd'):'var(--t3)'})}
-function doAdd(){const sym=document.getElementById('addSym')?.value,nm=document.getElementById('addNm')?.value,sh=document.getElementById('addSh')?.value,pr=document.getElementById('addPr')?.value;if(!sym||!sh||!pr){toast('❌ 必填');return}addStock({symbol:sym,name:nm||sym,shares:sh,price:pr,date:document.getElementById('addDt')?.value,note:document.getElementById('addNo')?.value,sector:_sec})}
-function fillAdd(sym,name){searchRes=[];const s=document.getElementById('addSym');if(s)s.value=sym;const n=document.getElementById('addNm');if(n)n.value=name;const sr=document.getElementById('addSR');if(sr)sr.innerHTML='';fetchOne(sym).then(p=>{if(p&&!p.error){const pr=document.getElementById('addPr');if(pr)pr.value=p.price;const nm=document.getElementById('addNm');if(nm&&!nm.value)nm.value=p.name||'';}})}
+function doAdd(){const sym=document.getElementById('addSym')?.value,nm=document.getElementById('addNm')?.value,sh=document.getElementById('addSh')?.value,pr=document.getElementById('addPr')?.value;if(!sym){toast('❌ 請輸入代號');return}if(!sh){toast('❌ 請輸入股數');return}if(!pr){toast('❌ 請輸入價格');return}addStock({symbol:sym,name:nm||sym,shares:sh,price:pr,date:document.getElementById('addDt')?.value,note:document.getElementById('addNo')?.value,sector:_sec})}
+function fillAdd(sym,name){searchRes=[];const s=document.getElementById('addSym');if(s)s.value=sym;const cn=twName(sym)||name;const n=document.getElementById('addNm');if(n)n.value=cn;const sr=document.getElementById('addSR');if(sr)sr.innerHTML='';fetchOne(sym).then(p=>{if(p&&!p.error){const pr=document.getElementById('addPr');if(pr)pr.value=p.price;const nm=document.getElementById('addNm');if(nm&&!nm.value)nm.value=twName(p.symbol)||p.name||''}})}
 
 // ── Detail ──
 function vDetail(){
@@ -464,13 +469,14 @@ function autoFillSim(val){
     _sbTimer=setTimeout(async()=>{
       const p=await fetchOne(val);
       if(p&&!p.error){
-        const nm=document.getElementById('sbN');if(nm&&!nm.value)nm.value=p.name||'';
+        const cn=twName(p.symbol)||p.name||'';
+        const nm=document.getElementById('sbN');if(nm&&!nm.value)nm.value=cn;
         const pr=document.getElementById('sbPr');if(pr&&!pr.value)pr.value=p.price||'';
       }
     },800);
   }
 }
-function fillSB(sym,name){searchRes=[];const s=document.getElementById('sbS');if(s)s.value=sym;const n=document.getElementById('sbN');if(n)n.value=name;const sr=document.getElementById('sbSR');if(sr)sr.innerHTML='';fetchOne(sym).then(p=>{if(p&&!p.error){const pr=document.getElementById('sbPr');if(pr)pr.value=p.price;const nm=document.getElementById('sbN');if(nm&&!nm.value)nm.value=p.name||''}})}
+function fillSB(sym,name){searchRes=[];const s=document.getElementById('sbS');if(s)s.value=sym;const cn=twName(sym)||name;const n=document.getElementById('sbN');if(n)n.value=cn;const sr=document.getElementById('sbSR');if(sr)sr.innerHTML='';fetchOne(sym).then(p=>{if(p&&!p.error){const pr=document.getElementById('sbPr');if(pr)pr.value=p.price;const nm=document.getElementById('sbN');if(nm&&!nm.value)nm.value=twName(p.symbol)||p.name||''}})}
 
 // Init
 render();
