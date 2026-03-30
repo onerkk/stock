@@ -10,7 +10,7 @@
 <meta http-equiv="Expires" content="0">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>Stock Tracker v6</title>
+<title>Stock Tracker v7</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{--bg:#060b14;--card:#0e1525;--card2:#080e1a;--ac:#00e8a2;--acD:rgba(0,232,162,.1);--red:#ff4d6a;--redD:rgba(255,77,106,.1);--amb:#ffb347;--ambD:rgba(255,179,71,.1);--blu:#4dabf7;--bluD:rgba(77,171,247,.1);--pur:#a29bfe;--purD:rgba(162,155,254,.12);--tx:#e4e8f1;--t2:#7b8db5;--t3:#3d4f6f;--bd:#1a2744;--hdbg:linear-gradient(180deg,#060b14 85%,transparent);--navbg:linear-gradient(0deg,#060b14 70%,transparent)}
@@ -86,11 +86,14 @@ input{font-family:inherit;outline:none}
 .install-bar .ib-x{font-size:14px;color:var(--t3);padding:4px}
 .alert-triggered{position:fixed;top:50px;left:50%;transform:translateX(-50%);background:var(--amb);color:#000;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:700;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,.4);animation:ld 0.3s ease}
 </style>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 <div class="hd">
   <div class="hd-row">
-    <h1>📈 Stock Tracker <span style="font-size:10px;font-weight:400;color:var(--t3)">v6</span></h1>
+    <h1>📈 Stock Tracker <span style="font-size:10px;font-weight:400;color:var(--t3)">v7</span></h1>
     <div class="hd-btns">
       <button class="hd-btn" onclick="toggleTheme()" id="themeBtn">🌙</button>
     </div>
@@ -131,9 +134,10 @@ function twName(sym){const code=sym.replace(/\.TW$/i,'');return TW_NAME[code]||n
 function dn(sym,name){return twName(sym)||twName(norm(sym))||name||sym}
 let prices={},idxData={},view='market',sub=null,sel=null,aRes='',aLoad=false,lastUp=null,autoOn=true,searchRes=[],timer=null;
 let chartData=null,chartRange='6mo',chartInterval='1d',chartLoading=false;
+let alerts=J('st-alerts',[]);
 
 function J(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}}
-function SV(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
+function SV(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{};cloudSave()}
 function ds(){return new Date().toISOString().slice(0,10)}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 function ts(){return new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
@@ -144,6 +148,25 @@ function pct(n){return(n>=0?'+':'')+n.toFixed(2)+'%'}
 function norm(s){s=s.toUpperCase().trim();if(/^\d{4,6}$/.test(s))return s+'.TW';return s}
 function gp(s){return prices[norm(s)]?.price}
 function toast(m){const el=document.getElementById('toastEl');el.textContent=m;el.style.display='block';setTimeout(()=>el.style.display='none',2e3)}
+
+// ── Firebase Cloud Sync ──
+const fbConfig={apiKey:"AIzaSyBKgqmsDIZgqf8nxWTDdTqVS01H0TIOCj4",authDomain:"myshift-a67f1.firebaseapp.com",projectId:"myshift-a67f1",storageBucket:"myshift-a67f1.firebasestorage.app",messagingSenderId:"779297515930",appId:"1:779297515930:web:7f5ba8992c5d5081a9f223"};
+firebase.initializeApp(fbConfig);
+const fbAuth=firebase.auth(),fbDb=firebase.firestore();
+fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+let fbUser=null,_fbLoading=false;
+fbAuth.onAuthStateChanged(u=>{fbUser=u;if(u)cloudLoad();render()});
+function fbLogin(){const p=new firebase.auth.GoogleAuthProvider();fbAuth.signInWithPopup(p).catch(e=>{fbAuth.signInWithRedirect(p)})}
+function fbLogout(){fbAuth.signOut().then(()=>{fbUser=null;render()})}
+let _csTimer=null;
+function cloudSave(){if(!fbUser||_fbLoading)return;clearTimeout(_csTimer);_csTimer=setTimeout(async()=>{try{await fbDb.collection("stockUsers").doc(fbUser.uid).set({port:JSON.stringify(port),txs:JSON.stringify(txs),watch:JSON.stringify(watch),sim:JSON.stringify(sim),simTx:JSON.stringify(simTx),alerts:JSON.stringify(alerts||[]),theme:isDark?'dark':'light',ts:firebase.firestore.FieldValue.serverTimestamp()},{merge:true})}catch(e){console.log("cloudSave err",e)}},1500)}
+async function cloudLoad(){if(!fbUser)return;_fbLoading=true;try{const doc=await fbDb.collection("stockUsers").doc(fbUser.uid).get();if(doc.exists){const d=doc.data();if(d.port)port=JSON.parse(d.port);if(d.txs)txs=JSON.parse(d.txs);if(d.watch)watch=JSON.parse(d.watch);if(d.sim)sim=JSON.parse(d.sim);if(d.simTx)simTx=JSON.parse(d.simTx);if(d.alerts)alerts=JSON.parse(d.alerts);if(d.theme){isDark=d.theme==='dark';applyTheme()}SV_local('st-port',port);SV_local('st-tx',txs);SV_local('st-watch',watch);SV_local('st-sim',sim);SV_local('st-simtx',simTx);SV_local('st-alerts',alerts);toast('☁️ 已從雲端恢復')}_fbLoading=false;render()}catch(e){console.log("cloudLoad err",e);_fbLoading=false;render()}}
+function SV_local(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
+function fbBarHtml(){
+  if(!fbUser)return`<div style="margin:0 12px 8px;padding:10px 14px;border-radius:12px;background:var(--card);border:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;color:var(--t3)">☁️ 登入可雲端同步</span><button class="btn" style="background:#fff;color:#333;padding:6px 14px;border:1px solid var(--bd);font-size:11px;display:flex;align-items:center;gap:6px" onclick="fbLogin()"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:14px;height:14px">Google 登入</button></div>`;
+  const pic=fbUser.photoURL?`<img src="${fbUser.photoURL}" referrerpolicy="no-referrer" style="width:20px;height:20px;border-radius:50%">`:'';
+  return`<div style="margin:0 12px 8px;padding:10px 14px;border-radius:12px;background:var(--card);border:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600">${pic}<span>☁️ ${fbUser.displayName||fbUser.email}</span></div><button class="btn" style="background:var(--card2);color:var(--t2);padding:4px 10px;font-size:10px;border:1px solid var(--bd)" onclick="fbLogout()">登出</button></div>`;
+}
 
 // ── Fetch ──
 async function fetchBatch(syms){
@@ -293,6 +316,7 @@ function renderTicker(){
 // ══════ MARKET VIEW ══════
 function vMarket(){
   let h=installBannerHtml();
+  h+=fbBarHtml();
   h+=`<div style="padding:0 12px 8px;display:flex;justify-content:space-between;align-items:center"><div style="font-size:16px;font-weight:800">🌍 全球指數</div><div class="live"><span class="dot" style="width:6px;height:6px;border-radius:50%;display:inline-block;background:${autoOn?'var(--ac)':'var(--t3)'};animation:${autoOn?'blink 1.5s infinite':'none'}"></span><span style="font-size:10px;color:var(--t2)">${autoOn?'即時':'暫停'}</span>${lastUp?`<span style="font-size:10px;color:var(--t3)">· ${lastUp}</span>`:''}<button class="btn" style="background:${autoOn?'var(--redD)':'var(--acD)'};color:${autoOn?'var(--red)':'var(--ac)'};padding:2px 8px;font-size:9px" onclick="autoOn=!autoOn;startAuto();render()">${autoOn?'⏸':'▶'}</button></div></div>`;
 
   // Featured: TAIEX large card
@@ -510,7 +534,6 @@ function installBannerHtml(){
 }
 
 // ── Price Alerts ──
-let alerts=J('st-alerts',[]);
 function saveAlerts(){SV('st-alerts',alerts)}
 function addAlert2(sym,above,below){
   alerts.push({id:uid(),symbol:sym.toUpperCase(),above:above||null,below:below||null,triggered:false});
