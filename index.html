@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#060b14">
+<link rel="manifest" href="manifest.json">
+<title>Stock Tracker</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--bg:#060b14;--card:#0e1525;--ac:#00e8a2;--acD:rgba(0,232,162,.1);--red:#ff4d6a;--redD:rgba(255,77,106,.1);--amb:#ffb347;--ambD:rgba(255,179,71,.1);--blu:#4dabf7;--bluD:rgba(77,171,247,.1);--pur:#a29bfe;--purD:rgba(162,155,254,.12);--tx:#e4e8f1;--t2:#7b8db5;--t3:#3d4f6f;--bd:#1a2744}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-user-select:none;user-select:none;overscroll-behavior:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input{font-family:inherit;outline:none}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes ld{0%{width:10%}50%{width:80%}100%{width:10%}}
+@keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+.hd{padding:12px 16px 0;position:sticky;top:0;z-index:20;background:linear-gradient(180deg,#060b14 85%,transparent)}
+.hd h1{font-size:18px;font-weight:800;background:linear-gradient(90deg,#00e8a2,#4dabf7);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hd p{font-size:9px;color:var(--t3);margin-top:1px}
+
+/* Ticker strip */
+.ticker-wrap{overflow:hidden;margin:6px 0 2px;background:var(--card);border-radius:8px;padding:6px 0;border:1px solid var(--bd)}
+.ticker{display:flex;gap:16px;animation:tick 30s linear infinite;width:max-content}
+.ticker:hover{animation-play-state:paused}
+.ticker-item{display:flex;align-items:center;gap:6px;white-space:nowrap;padding:0 4px;cursor:pointer}
+.ticker-item .tn{font-size:11px;font-weight:700;color:var(--t2)}
+.ticker-item .tv{font-size:12px;font-weight:800}
+.ticker-item .tc{font-size:10px;font-weight:700}
+.ticker-item .tc.up{color:var(--ac)}.ticker-item .tc.dn{color:var(--red)}
+
+.cd{margin:0 12px 8px;padding:14px;border-radius:14px;background:var(--card);border:1px solid var(--bd)}
+.pl{display:inline-flex;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700}
+.btn{padding:9px 16px;border-radius:10px;font-size:12px;font-weight:700;border:none;cursor:pointer}
+.btn:active{opacity:.7}
+.inp{width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--bd);background:#080e1a;color:var(--tx);font-size:13px}
+.lb{display:block;font-size:10px;color:var(--t2);font-weight:600;margin-bottom:3px}
+.nav{position:fixed;bottom:0;left:0;right:0;display:flex;gap:1px;padding:6px 6px;padding-bottom:calc(6px + env(safe-area-inset-bottom));background:linear-gradient(0deg,#060b14 70%,transparent);z-index:30}
+.nav button{flex:1;padding:4px 0;border-radius:8px;font-size:8px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:1px}
+.nav button span:first-child{font-size:14px}
+.nav button.on{background:var(--acD);color:var(--ac)}
+.nav button.on-p{background:var(--purD);color:var(--pur)}
+.nav button.on-a{background:var(--ambD);color:var(--amb)}
+.toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--card);color:var(--tx);padding:8px 18px;border-radius:10px;font-size:12px;font-weight:600;border:1px solid rgba(0,232,162,.2);z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.sr{background:var(--card);border:1px solid var(--bd);border-radius:8px;margin-top:4px;max-height:140px;overflow-y:auto}
+.sr div{padding:6px 10px;font-size:11px;border-bottom:1px solid var(--bd)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.stat{padding:8px;border-radius:8px;background:#080e1a;text-align:center}
+.stat .sl{font-size:7px;color:var(--t3);font-weight:600}
+.stat .sv{font-size:12px;font-weight:700;margin-top:1px}
+.bar{display:flex;border-radius:6px;overflow:hidden;height:8px}
+.back{background:transparent;color:var(--t2);border:1px solid var(--bd);margin-bottom:10px;font-size:11px;padding:5px 10px;border-radius:10px}
+#content{padding:2px 0 72px}
+
+/* Index cards */
+.idx-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 12px;margin-bottom:8px}
+.idx{padding:10px;border-radius:10px;background:var(--card);border:1px solid var(--bd);cursor:pointer}
+.idx:active{opacity:.8}
+.idx .idx-n{font-size:11px;font-weight:700;color:var(--t2)}
+.idx .idx-v{font-size:18px;font-weight:800;margin-top:2px}
+.idx .idx-c{font-size:11px;font-weight:700;margin-top:1px}
+.idx .idx-d{font-size:9px;color:var(--t3);margin-top:2px}
+.idx.up{border-color:rgba(0,232,162,.15)}.idx.up .idx-c{color:var(--ac)}
+.idx.dn{border-color:rgba(255,77,106,.15)}.idx.dn .idx-c{color:var(--red)}
+</style>
+</head>
+<body>
+<div class="hd"><h1>📈 Stock Tracker</h1><p id="hdSub"></p></div>
+<div id="ticker"></div>
+<div id="content"></div>
+<div id="toastEl" class="toast" style="display:none"></div>
+<div class="nav" id="navEl"></div>
+
+<script>
+const W=location.hostname==='localhost'?'http://localhost:8787':'https://stock-price.onerkk.workers.dev';
+const W_AI='https://stock-ai.onerkk.workers.dev';
+const SECTORS={"科技":"#00e8a2","金融":"#ffa502","傳產":"#a29bfe","生技":"#ff6b81","半導體":"#0984e3","能源":"#fdcb6e","消費":"#e17055","地產":"#636e72","ETF":"#74b9ff","其他":"#dfe6e9"};
+const SIM_CASH=1e6;
+const ATPL=[{id:"full",l:"📊 完整分析"},{id:"news",l:"📰 近期新聞"},{id:"technical",l:"📈 技術面"},{id:"compare",l:"⚖️ 同業比較"},{id:"dividend",l:"💰 殖利率"},{id:"risk",l:"⚠️ 風險評估"}];
+
+// Global indices config
+const IDX=[
+  {s:'^TWII',n:'加權指數',flag:'🇹🇼'},
+  {s:'^DJI',n:'道瓊指數',flag:'🇺🇸'},
+  {s:'^IXIC',n:'那斯達克',flag:'🇺🇸'},
+  {s:'^NDX',n:'那斯達克100',flag:'🇺🇸'},
+  {s:'^SOX',n:'費城半導體',flag:'🔧'},
+  {s:'DX-Y.NYB',n:'美元指數',flag:'💵'},
+  {s:'^KS11',n:'韓國股市',flag:'🇰🇷'},
+  {s:'^N225',n:'日經225',flag:'🇯🇵'},
+  {s:'000001.SS',n:'上海股市',flag:'🇨🇳'},
+  {s:'399001.SZ',n:'深圳成指',flag:'🇨🇳'},
+];
+
+let port=J('st-port',[]),txs=J('st-tx',[]),watch=J('st-watch',[]),sim=J('st-sim',{cash:SIM_CASH,holdings:[],startDate:ds(),startCash:SIM_CASH}),simTx=J('st-simtx',[]);
+let prices={},idxData={},view='market',sub=null,sel=null,aRes='',aLoad=false,lastUp=null,autoOn=true,searchRes=[],timer=null;
+
+function J(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}}
+function SV(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
+function ds(){return new Date().toISOString().slice(0,10)}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function ts(){return new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
+function fmt(n){return n==null||isNaN(n)?'--':Number(n).toLocaleString('zh-TW',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function fmtK(n){const a=Math.abs(n);if(a>=1e6)return(n/1e6).toFixed(1)+'M';if(a>=1e3)return(n/1e3).toFixed(1)+'K';return fmt(n)}
+function fmtI(n){return Number(n).toLocaleString('zh-TW')}
+function pct(n){return(n>=0?'+':'')+n.toFixed(2)+'%'}
+function norm(s){s=s.toUpperCase().trim();if(/^\d{4,6}$/.test(s))return s+'.TW';return s}
+function gp(s){return prices[norm(s)]?.price}
+function toast(m){const el=document.getElementById('toastEl');el.textContent=m;el.style.display='block';setTimeout(()=>el.style.display='none',2e3)}
+
+// ── Fetch ──
+async function fetchBatch(syms){
+  if(!syms.length)return;
+  try{const r=await fetch(W+'?s='+encodeURIComponent(syms.join(','))+'&action=batch');const d=await r.json();
+    if(d&&typeof d==='object'&&!d.error)Object.entries(d).forEach(([k,v])=>{if(!v.error)prices[k]=v});lastUp=ts()}catch(e){console.error(e)}
+}
+async function fetchIdx(){
+  const syms=IDX.map(i=>i.s);
+  try{const r=await fetch(W+'?s='+encodeURIComponent(syms.join(','))+'&action=batch');const d=await r.json();
+    if(d&&typeof d==='object')Object.entries(d).forEach(([k,v])=>{if(!v.error)idxData[k]=v})}catch(e){console.error(e)}
+}
+async function fetchOne(sym){
+  try{const r=await fetch(W+'?s='+encodeURIComponent(norm(sym))+'&action=quote');const d=await r.json();
+    if(d&&!d.error){prices[d.symbol]=d;lastUp=ts()}return d}catch{return null}
+}
+async function searchQ(q){
+  try{const r=await fetch(W+'?s='+encodeURIComponent(q)+'&action=search');const d=await r.json();searchRes=Array.isArray(d)?d:[];render()}catch{searchRes=[];render()}
+}
+function allSyms(){const s=new Set();port.forEach(x=>s.add(norm(x.symbol)));watch.forEach(x=>s.add(norm(x.symbol)));sim.holdings.forEach(x=>s.add(norm(x.symbol)));return[...s]}
+async function refreshAll(){await fetchIdx();const s=allSyms();if(s.length)await fetchBatch(s);render()}
+function startAuto(){if(timer)clearInterval(timer);if(autoOn){refreshAll();timer=setInterval(refreshAll,15000)}}
+
+// ── AI ──
+async function runAI(sym,name,tid){
+  aLoad=true;aRes='';view='analysis';render();
+  const h=port.find(s=>s.symbol===sym);const p=prices[norm(sym)];
+  const ctx=`持倉：${h?h.shares+'股均'+h.avgCost:'未持有'}\n${p?'即時價'+p.price+' 漲跌'+p.change+'('+p.changePct+'%) 量'+(p.volume||0)+' 52W高'+p.fiftyTwoWeekHigh+' 低'+p.fiftyTwoWeekLow:''}`;
+  const prompts={full:`完整分析${sym}(${name})。${ctx}\n繁中：1.基本面 2.近週新聞 3.技術面 4.1-3月價格區間 5.風險 6.建議。搜尋最新。`,news:`搜尋${sym}(${name})近週新聞繁中。`,technical:`技術分析${sym}(${name})${ctx}繁中。`,compare:`比較${sym}(${name})與同業繁中。`,dividend:`${sym}(${name})殖利率配息繁中。`,risk:`風險評估${sym}(${name})${ctx}繁中。`};
+  try{const r=await fetch(W_AI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:prompts[tid||'full']})});const d=await r.json();aRes=d.result||d.error||'分析失敗'}catch(e){aRes='❌ AI Worker 尚未部署，請先部署 stock-ai Worker 並設定 ANTHROPIC_API_KEY'}
+  aLoad=false;render();
+}
+
+// ── CRUD ──
+function addStock(f){const sym=f.symbol.toUpperCase().trim();txs.unshift({id:uid(),symbol:sym,name:f.name,type:'BUY',shares:+f.shares,price:+f.price,date:f.date||ds(),note:f.note});SV('st-tx',txs);const ex=port.find(s=>s.symbol===sym);if(ex){const t2=ex.shares+(+f.shares);ex.avgCost=(ex.avgCost*ex.shares+(+f.price)*(+f.shares))/t2;ex.shares=t2}else port.push({symbol:sym,name:f.name,shares:+f.shares,avgCost:+f.price,sector:f.sector||'其他'});SV('st-port',port);toast('✅ '+sym);view='portfolio';fetchOne(sym);startAuto();render()}
+function sellStock(sym,shares,price,note){const s=port.find(x=>x.symbol===sym);if(!s||shares>s.shares){toast('❌ 不足');return}const profit=(price-s.avgCost)*shares;txs.unshift({id:uid(),symbol:sym,name:s.name,type:'SELL',shares,price,date:ds(),note,profit});SV('st-tx',txs);s.shares-=shares;if(s.shares<=0)port=port.filter(x=>x.symbol!==sym);SV('st-port',port);toast('✅ 損益'+(profit>=0?'+':'')+fmt(profit));sub=null;render()}
+function delStock(sym){port=port.filter(s=>s.symbol!==sym);SV('st-port',port);sel=null;view='portfolio';render()}
+function addW(sym,name){const s=sym.toUpperCase();if(watch.find(w=>w.symbol===s))return;watch.push({symbol:s,name});SV('st-watch',watch);fetchOne(s);startAuto();render()}
+function delW(sym){watch=watch.filter(w=>w.symbol!==sym);SV('st-watch',watch);render()}
+function simBuy(sym,name,shares,price){if(shares*price>sim.cash){toast('❌ 資金不足');return}simTx.unshift({id:uid(),symbol:sym,name,type:'BUY',shares,price,date:ds(),time:ts()});SV('st-simtx',simTx);const ex=sim.holdings.find(h=>h.symbol===sym);if(ex){const t2=ex.shares+shares;ex.avgCost=(ex.avgCost*ex.shares+price*shares)/t2;ex.shares=t2}else sim.holdings.push({symbol:sym,name,shares,avgCost:price});sim.cash-=shares*price;SV('st-sim',sim);toast('🎮 '+sym);fetchOne(sym);startAuto();render()}
+function simSell(sym,shares,price){const h=sim.holdings.find(x=>x.symbol===sym);if(!h||shares>h.shares){toast('❌');return}const profit=(price-h.avgCost)*shares;simTx.unshift({id:uid(),symbol:sym,name:h.name,type:'SELL',shares,price,date:ds(),time:ts(),profit});SV('st-simtx',simTx);h.shares-=shares;if(h.shares<=0)sim.holdings=sim.holdings.filter(x=>x.symbol!==sym);sim.cash+=shares*price;SV('st-sim',sim);render()}
+function simReset(){sim={cash:SIM_CASH,holdings:[],startDate:ds(),startCash:SIM_CASH};simTx=[];SV('st-sim',sim);SV('st-simtx',simTx);toast('🔄');render()}
+
+// ── Computed ──
+function tc(){return port.reduce((s,x)=>s+x.avgCost*x.shares,0)}
+function tv(){return port.reduce((s,x)=>s+(gp(x.symbol)||x.avgCost)*x.shares,0)}
+function rpl(){return txs.filter(t=>t.profit).reduce((s,t)=>s+t.profit,0)}
+
+// ══════ RENDER ══════
+function render(){
+  const c=document.getElementById('content');
+  document.getElementById('hdSub').textContent=`實盤${port.length} · 模擬${sim.holdings.length} · 觀察${watch.length}${lastUp?' · 🔄'+lastUp:''}`;
+
+  // Ticker strip
+  renderTicker();
+
+  // Nav
+  const tabs=[{k:'market',i:'🌍',l:'大盤'},{k:'portfolio',i:'📊',l:'實盤'},{k:'sim',i:'🎮',l:'模擬'},{k:'add',i:'➕',l:'買入'},{k:'search',i:'🤖',l:'分析'},{k:'watch',i:'👁️',l:'觀察'},{k:'tx',i:'📜',l:'紀錄'}];
+  document.getElementById('navEl').innerHTML=tabs.map(t=>`<button class="${view===t.k?(t.k==='sim'?'on-p':t.k==='market'?'on-a':'on'):''}" onclick="nav('${t.k}')"><span>${t.i}</span><span>${t.l}</span></button>`).join('');
+
+  if(view==='market')c.innerHTML=vMarket();
+  else if(view==='portfolio')c.innerHTML=vPort();
+  else if(view==='add')c.innerHTML=vAdd();
+  else if(view==='detail')c.innerHTML=vDetail();
+  else if(view==='analysis')c.innerHTML=vAI();
+  else if(view==='watch')c.innerHTML=vWatch();
+  else if(view==='search')c.innerHTML=vSearch();
+  else if(view==='tx')c.innerHTML=vTx();
+  else if(view==='sim')c.innerHTML=vSim();
+}
+function nav(v){view=v;sub=null;searchRes=[];render()}
+
+// ── Ticker Strip ──
+function renderTicker(){
+  const el=document.getElementById('ticker');
+  const items=IDX.map(i=>{const d=idxData[i.s];if(!d)return`<div class="ticker-item"><span class="tn">${i.flag} ${i.n}</span><span class="tv">--</span></div>`;
+    const up=d.changePct>=0;return`<div class="ticker-item" onclick="nav('market')"><span class="tn">${i.flag} ${i.n}</span><span class="tv">${fmtI(Math.round(d.price))}</span><span class="tc ${up?'up':'dn'}">${up?'▲':'▼'}${Math.abs(d.changePct).toFixed(2)}%</span></div>`}).join('');
+  el.innerHTML=`<div class="ticker-wrap"><div class="ticker">${items}${items}</div></div>`;
+}
+
+// ══════ MARKET VIEW ══════
+function vMarket(){
+  let h=`<div style="padding:0 12px 8px;display:flex;justify-content:space-between;align-items:center"><div style="font-size:16px;font-weight:800">🌍 全球指數</div><div class="live"><span class="dot" style="width:6px;height:6px;border-radius:50%;display:inline-block;background:${autoOn?'var(--ac)':'var(--t3)'};animation:${autoOn?'blink 1.5s infinite':'none'}"></span><span style="font-size:10px;color:var(--t2)">${autoOn?'即時':'暫停'}</span>${lastUp?`<span style="font-size:10px;color:var(--t3)">· ${lastUp}</span>`:''}<button class="btn" style="background:${autoOn?'var(--redD)':'var(--acD)'};color:${autoOn?'var(--red)':'var(--ac)'};padding:2px 8px;font-size:9px" onclick="autoOn=!autoOn;startAuto();render()">${autoOn?'⏸':'▶'}</button></div></div>`;
+
+  // Featured: TAIEX large card
+  const tw=idxData['^TWII'];
+  if(tw){
+    const up=tw.changePct>=0;
+    h+=`<div class="cd" style="background:linear-gradient(135deg,#0e1525,${up?'#0a1a15':'#1a0e15'});border-color:${up?'rgba(0,232,162,.2)':'rgba(255,77,106,.2)'}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div><div style="font-size:12px;color:var(--t2);font-weight:600">🇹🇼 加權指數</div>
+        <div style="font-size:32px;font-weight:900;margin-top:4px;letter-spacing:-1px">${fmtI(Math.round(tw.price))}</div>
+        <div style="font-size:14px;font-weight:700;color:${up?'var(--ac)':'var(--red)'};margin-top:2px">${up?'▲':'▼'} ${fmt(Math.abs(tw.change))} (${pct(tw.changePct)})</div>
+      </div>
+      <div style="text-align:right">
+        ${tw.high?`<div style="font-size:10px;color:var(--t3)">高 ${fmtI(Math.round(tw.high))}</div>`:''}
+        ${tw.low?`<div style="font-size:10px;color:var(--t3)">低 ${fmtI(Math.round(tw.low))}</div>`:''}
+        ${tw.volume?`<div style="font-size:10px;color:var(--t3)">量 ${fmtK(tw.volume)}</div>`:''}
+        <div style="font-size:9px;color:var(--t3);margin-top:4px">${tw.marketState==='REGULAR'?'🟢 開盤中':tw.marketState==='CLOSED'?'🔴 收盤':'⚪ '+tw.marketState}</div>
+      </div>
+    </div></div>`;
+  }
+
+  // Index grid
+  h+=`<div class="idx-grid">`;
+  IDX.filter(i=>i.s!=='^TWII').forEach(i=>{
+    const d=idxData[i.s];
+    if(!d){h+=`<div class="idx"><div class="idx-n">${i.flag} ${i.n}</div><div class="idx-v" style="color:var(--t3)">--</div></div>`;return}
+    const up=d.changePct>=0;
+    h+=`<div class="idx ${up?'up':'dn'}">
+      <div class="idx-n">${i.flag} ${i.n}</div>
+      <div class="idx-v">${d.price>9999?fmtI(Math.round(d.price)):fmt(d.price)}</div>
+      <div class="idx-c">${up?'▲':'▼'} ${fmt(Math.abs(d.change))} ${pct(d.changePct)}</div>
+      <div class="idx-d">${d.marketState==='REGULAR'?'🟢 開盤中':'🔴 收盤'}</div>
+    </div>`;
+  });
+  h+=`</div>`;
+
+  // Quick summary if has portfolio
+  if(port.length){
+    const v=tv(),c=tc(),pl=v-c,plp=c>0?(pl/c)*100:0;
+    h+=`<div class="cd"><div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="nav('portfolio')"><div><div style="font-size:10px;color:var(--t3);font-weight:600">我的持倉</div><div style="font-size:20px;font-weight:800;margin-top:2px">$${fmtK(v)}</div></div><div style="text-align:right"><div style="font-size:14px;font-weight:800;color:${pl>=0?'var(--ac)':'var(--red)'}">${pl>=0?'+':''}${fmtK(pl)}</div><div style="font-size:10px;color:${pl>=0?'var(--ac)':'var(--red)'}">${pct(plp)}</div></div></div></div>`;
+  }
+
+  return h;
+}
+
+// ══════ PORTFOLIO ══════
+function vPort(){
+  const v=tv(),c=tc(),pl=v-c,plp=c>0?(pl/c)*100:0,rp=rpl();
+  const secs=[];const m={};port.forEach(s=>{const val=(gp(s.symbol)||s.avgCost)*s.shares;m[s.sector||'其他']=(m[s.sector||'其他']||0)+val});const t2=Object.values(m).reduce((a,b)=>a+b,0);Object.entries(m).forEach(([n,val])=>secs.push({n,val,p:t2>0?val/t2*100:0}));secs.sort((a,b)=>b.val-a.val);
+
+  let h=`<div class="cd"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:10px;color:var(--t3);font-weight:600;text-transform:uppercase;letter-spacing:1px">實盤組合</div><div style="font-size:26px;font-weight:800;margin-top:4px;letter-spacing:-1px">$${fmtK(v)}</div></div>
+  <div style="display:flex;align-items:center;gap:4px"><button class="btn" style="background:${autoOn?'var(--redD)':'var(--acD)'};color:${autoOn?'var(--red)':'var(--ac)'};padding:2px 8px;font-size:9px" onclick="autoOn=!autoOn;startAuto();render()">${autoOn?'⏸':'▶'}</button><button class="btn" style="background:var(--bluD);color:var(--blu);padding:2px 8px;font-size:9px" onclick="refreshAll()">⟳</button></div></div>
+  <div style="display:flex;gap:14px;margin-top:6px;flex-wrap:wrap">
+    <div><div style="font-size:8px;color:var(--t3);font-weight:600">未實現</div><div style="font-size:14px;font-weight:800;color:${pl>=0?'var(--ac)':'var(--red)'}">${pl>=0?'+':''}${fmtK(pl)}</div><div style="font-size:9px;color:${pl>=0?'var(--ac)':'var(--red)'}">${pct(plp)}</div></div>
+    <div><div style="font-size:8px;color:var(--t3);font-weight:600">已實現</div><div style="font-size:14px;font-weight:800;color:${rp>=0?'var(--ac)':'var(--red)'}">${rp>=0?'+':''}${fmtK(rp)}</div></div>
+    <div><div style="font-size:8px;color:var(--t3);font-weight:600">持股</div><div style="font-size:14px;font-weight:800">${port.length}</div></div>
+  </div></div>`;
+
+  if(secs.length>1)h+=`<div class="cd"><div style="font-size:11px;font-weight:700;margin-bottom:6px">📊 配置</div><div class="bar">${secs.map(s=>`<div style="width:${s.p}%;background:${SECTORS[s.n]||'#636e72'};min-width:2px"></div>`).join('')}</div><div style="display:flex;flex-wrap:wrap;gap:3px 8px;margin-top:6px">${secs.map(s=>`<div style="display:flex;align-items:center;gap:3px;font-size:10px"><span style="width:8px;height:8px;border-radius:2px;background:${SECTORS[s.n]||'#636e72'};display:inline-block"></span><span style="color:var(--t2)">${s.n}</span><span style="font-weight:700">${s.p.toFixed(0)}%</span></div>`).join('')}</div></div>`;
+
+  if(!port.length)h+=`<div style="text-align:center;padding:40px;color:var(--t3)"><div style="font-size:36px;margin-bottom:8px">📊</div><div style="font-size:13px;font-weight:600">點「+」開始</div></div>`;
+  else port.forEach(s=>{const n=norm(s.symbol),p=prices[n],cur=p?.price||s.avgCost,pl2=(cur-s.avgCost)*s.shares,up=pl2>=0;
+    h+=`<div class="cd" style="cursor:pointer" onclick="sel='${s.symbol}';view='detail';sub=null;render()"><div style="display:flex;justify-content:space-between"><div><div style="display:flex;align-items:center;gap:6px"><span style="font-size:14px;font-weight:700">${s.symbol}</span><span class="pl" style="color:${SECTORS[s.sector]||'var(--t3)'};background:${(SECTORS[s.sector]||'var(--t3)')+'22'}">${s.sector}</span>${p?.marketState==='REGULAR'?'<span style="width:5px;height:5px;border-radius:50%;background:var(--ac);display:inline-block"></span>':''}</div><div style="font-size:10px;color:var(--t2);margin-top:2px">${s.name}</div><div style="font-size:10px;color:var(--t3);margin-top:3px">${fmtI(s.shares)}股·均${fmt(s.avgCost)}</div></div><div style="text-align:right"><div style="font-size:16px;font-weight:800">${fmt(cur)}</div>${p?`<div style="font-size:10px;color:${p.changePct>=0?'var(--ac)':'var(--red)'};font-weight:600">${p.changePct>=0?'▲':'▼'}${Math.abs(p.changePct).toFixed(2)}%</div>`:''}<div style="font-size:12px;font-weight:700;color:${up?'var(--ac)':'var(--red)'};margin-top:2px">${up?'+':''}${fmtK(pl2)}</div></div></div></div>`;
+  });
+  return h;
+}
+
+// ── Add ──
+function vAdd(){
+  return`<div style="padding:0 12px"><div style="font-size:16px;font-weight:800;margin-bottom:12px">📥 買入</div>
+  <div style="margin-bottom:10px"><label class="lb">代號 *</label><input class="inp" id="addSym" placeholder="2330 / AAPL" oninput="if(this.value.length>=2)searchQ(this.value)"><div id="addSR"></div></div>
+  <div style="margin-bottom:10px"><label class="lb">名稱 *</label><input class="inp" id="addNm" placeholder="台積電"></div>
+  <div style="margin-bottom:10px"><label class="lb">股數 *</label><input class="inp" id="addSh" type="number" placeholder="1000"></div>
+  <div style="margin-bottom:10px"><label class="lb">買入價 *</label><input class="inp" id="addPr" type="number" placeholder="即時價"></div>
+  <div style="margin-bottom:10px"><label class="lb">日期</label><input class="inp" id="addDt" type="date" value="${ds()}"></div>
+  <div style="margin-bottom:10px"><label class="lb">備註</label><input class="inp" id="addNo" placeholder="..."></div>
+  <div style="margin-bottom:12px"><label class="lb">產業</label><div id="addSec" style="display:flex;flex-wrap:wrap;gap:4px">${Object.keys(SECTORS).map(s=>`<button class="btn" style="padding:4px 10px;font-size:10px;background:${s==='其他'?SECTORS[s]+'33':'#111827'};color:${s==='其他'?SECTORS[s]:'var(--t3)'}" onclick="pickSec(this,'${s}')">${s}</button>`).join('')}</div></div>
+  <button class="btn" style="background:var(--ac);color:#060b14;width:100%;font-size:14px;padding:12px" onclick="doAdd()">確認買入</button>
+  <button class="btn" style="background:transparent;color:var(--t2);width:100%;margin-top:6px;border:1px solid var(--bd)" onclick="nav('portfolio')">取消</button></div>`;
+}
+let _sec='其他';
+function pickSec(el,s){_sec=s;document.querySelectorAll('#addSec button').forEach(b=>{const n=b.textContent;b.style.background=n===s?(SECTORS[n]||'#ddd')+'33':'#111827';b.style.color=n===s?(SECTORS[n]||'#ddd'):'var(--t3)'})}
+function doAdd(){const sym=document.getElementById('addSym')?.value,nm=document.getElementById('addNm')?.value,sh=document.getElementById('addSh')?.value,pr=document.getElementById('addPr')?.value;if(!sym||!sh||!pr){toast('❌ 必填');return}addStock({symbol:sym,name:nm||sym,shares:sh,price:pr,date:document.getElementById('addDt')?.value,note:document.getElementById('addNo')?.value,sector:_sec})}
+function fillAdd(sym,name){searchRes=[];render();setTimeout(()=>{const s=document.getElementById('addSym');if(s)s.value=sym;const n=document.getElementById('addNm');if(n)n.value=name;fetchOne(sym).then(p=>{if(p?.price){const pr=document.getElementById('addPr');if(pr)pr.value=p.price}})},50)}
+
+// ── Detail ──
+function vDetail(){
+  const stock=port.find(x=>x.symbol===sel);if(!stock)return`<div style="padding:0 12px"><button class="back" onclick="nav('portfolio')">←</button></div>`;
+  const n=norm(stock.symbol),p=prices[n],cur=p?.price||stock.avgCost,pl2=(cur-stock.avgCost)*stock.shares,plP=((cur-stock.avgCost)/stock.avgCost)*100,up=pl2>=0;
+  if(sub==='sell')return`<div style="padding:0 12px"><button class="back" onclick="sub=null;render()">←</button><div class="cd" style="background:var(--redD);border-color:rgba(255,77,106,.2)"><div style="font-size:14px;font-weight:700;color:var(--red);margin-bottom:10px">📤 賣出 ${stock.symbol}</div><div style="margin-bottom:8px"><label class="lb">股數 (≤${fmtI(stock.shares)})</label><input class="inp" id="slSh" type="number"></div><div style="margin-bottom:8px"><label class="lb">價格</label><input class="inp" id="slPr" type="number" value="${cur}"></div><div style="margin-bottom:8px"><label class="lb">備註</label><input class="inp" id="slNo"></div><button class="btn" style="background:var(--red);color:#fff;width:100%" onclick="doSell('${stock.symbol}')">確認賣出</button></div></div>`;
+  if(sub==='pickA')return`<div style="padding:0 12px"><button class="back" onclick="sub=null;render()">←</button><div style="font-size:14px;font-weight:700;margin-bottom:10px">🤖 分析 ${stock.symbol}</div>${ATPL.map(t=>`<div class="cd" style="cursor:pointer" onclick="sub=null;runAI('${stock.symbol}','${stock.name}','${t.id}')"><div style="font-size:13px;font-weight:700">${t.l}</div></div>`).join('')}</div>`;
+  const stx=txs.filter(t=>t.symbol===stock.symbol).slice(0,8);
+  return`<div style="padding:0 12px"><button class="back" onclick="nav('portfolio')">←</button>
+  <div class="cd"><div style="display:flex;justify-content:space-between"><div><div style="font-size:20px;font-weight:800">${stock.symbol}</div><div style="font-size:11px;color:var(--t2)">${stock.name}</div></div><div style="text-align:right"><div style="font-size:22px;font-weight:800">${fmt(cur)}</div>${p?`<div style="font-size:11px;color:${p.changePct>=0?'var(--ac)':'var(--red)'}">${p.changePct>=0?'+':''}${fmt(p.change)} (${pct(p.changePct)})</div>`:''}</div></div>
+  <div class="g3" style="margin-top:10px">${[{l:'股數',v:fmtI(stock.shares)},{l:'均價',v:fmt(stock.avgCost)},{l:'市值',v:fmtK(cur*stock.shares)},...(p?.high?[{l:'今高',v:fmt(p.high)}]:[]),...(p?.low?[{l:'今低',v:fmt(p.low)}]:[]),...(p?.volume?[{l:'量',v:fmtI(p.volume)}]:[]),...(p?.fiftyTwoWeekHigh?[{l:'52W高',v:fmt(p.fiftyTwoWeekHigh)}]:[]),...(p?.fiftyTwoWeekLow?[{l:'52W低',v:fmt(p.fiftyTwoWeekLow)}]:[])].map(d=>`<div class="stat"><div class="sl">${d.l}</div><div class="sv">${d.v}</div></div>`).join('')}</div>
+  <div style="margin-top:8px;padding:6px 10px;border-radius:8px;background:${up?'var(--acD)':'var(--redD)'};text-align:center"><span style="font-size:15px;font-weight:800;color:${up?'var(--ac)':'var(--red)'}">${up?'+':''}${fmt(pl2)} (${pct(plP)})</span></div></div>
+  <div class="g2" style="margin:0 0 8px"><button class="btn" style="background:var(--bluD);color:var(--blu)" onclick="sub='pickA';render()">🤖 AI分析</button><button class="btn" style="background:var(--redD);color:var(--red)" onclick="sub='sell';render()">📤 賣出</button></div>
+  <div style="font-size:12px;font-weight:700;margin:10px 0 6px">📜 紀錄</div>${stx.map(txRow).join('')}</div>`;
+}
+function doSell(sym){const sh=+document.getElementById('slSh')?.value,pr=+document.getElementById('slPr')?.value;if(!sh||!pr){toast('❌');return}sellStock(sym,sh,pr,document.getElementById('slNo')?.value)}
+
+// ── AI ──
+function vAI(){return`<div style="padding:0 12px"><button class="back" onclick="nav(sel?'detail':'portfolio')">←</button><div style="font-size:16px;font-weight:800;margin-bottom:2px">🤖 AI 分析</div>${aLoad?`<div style="text-align:center;padding:40px"><div style="font-size:32px;margin-bottom:8px">🔍</div><div style="color:var(--t2);font-size:12px">分析中…15-30秒</div><div style="margin-top:16px;height:3px;border-radius:2px;background:var(--bd);overflow:hidden"><div style="height:100%;background:var(--ac);animation:ld 2s ease-in-out infinite"></div></div></div>`:`<div style="padding:14px;border-radius:12px;background:var(--card);border:1px solid var(--bd);white-space:pre-wrap;font-size:12px;line-height:1.8">${aRes||'無'}</div>`}<div style="margin-top:10px;padding:8px;border-radius:8px;background:var(--ambD);font-size:10px;color:var(--amb);font-weight:600;text-align:center">⚠️ 僅供參考</div></div>`}
+
+// ── Watch ──
+function vWatch(){
+  let h=`<div style="padding:0 12px"><div style="font-size:16px;font-weight:800;margin-bottom:10px">👁️ 觀察</div><div style="display:flex;gap:6px;margin-bottom:6px"><input class="inp" id="wSy" placeholder="代號" style="flex:1" oninput="if(this.value.length>=2)searchQ(this.value)"><input class="inp" id="wNm" placeholder="名稱" style="flex:1"><button class="btn" style="background:var(--ac);color:#060b14" onclick="doAW()">+</button></div>`;
+  if(searchRes.length)h+=`<div class="sr">${searchRes.map(r=>`<div onclick="searchRes=[];addW('${r.symbol}','${(r.name||'').replace(/'/g,'')}');render()""><b>${r.symbol}</b> <span style="color:var(--t2)">${r.name}</span></div>`).join('')}</div>`;
+  if(!watch.length)h+=`<div style="text-align:center;padding:30px;color:var(--t3);font-size:12px">空</div>`;
+  else watch.forEach(w=>{const p=prices[norm(w.symbol)];h+=`<div class="cd"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:14px;font-weight:700">${w.symbol}</div><div style="font-size:10px;color:var(--t2)">${w.name}</div></div><div style="display:flex;align-items:center;gap:6px"><div style="text-align:right"><div style="font-size:15px;font-weight:800">${p?fmt(p.price):'--'}</div>${p?.changePct!=null?`<div style="font-size:10px;color:${p.changePct>=0?'var(--ac)':'var(--red)'}">${pct(p.changePct)}</div>`:''}</div><button class="btn" style="background:var(--bluD);color:var(--blu);padding:4px 8px;font-size:10px" onclick="runAI('${w.symbol}','${w.name}','full')">🤖</button><button class="btn" style="background:#111827;color:var(--t3);padding:4px 8px;font-size:10px" onclick="delW('${w.symbol}');render()">✕</button></div></div></div>`});
+  return h+'</div>';
+}
+function doAW(){const s=document.getElementById('wSy')?.value,n=document.getElementById('wNm')?.value;if(s){addW(s,n);searchRes=[];render()}}
+
+// ── Search / Quick AI ──
+function vSearch(){
+  let h=`<div style="padding:0 12px"><div style="font-size:16px;font-weight:800;margin-bottom:10px">🔍 分析</div><input class="inp" id="sSy" placeholder="股票代號" style="margin-bottom:4px" oninput="if(this.value.length>=2)searchQ(this.value)">`;
+  if(searchRes.length)h+=`<div class="sr">${searchRes.map(r=>`<div onclick="searchRes=[];render();setTimeout(()=>{document.getElementById('sSy').value='${r.symbol}'},50)"><b>${r.symbol}</b> <span style="color:var(--t2)">${r.name}</span></div>`).join('')}</div>`;
+  h+=`<div style="display:flex;flex-wrap:wrap;gap:4px;margin:8px 0 10px" id="sT">${ATPL.map((t,i)=>`<button class="btn" style="padding:5px 10px;font-size:10px;background:${i===0?'var(--acD)':'#111827'};color:${i===0?'var(--ac)':'var(--t3)'}" onclick="pickT(this,'${t.id}')">${t.l}</button>`).join('')}</div>
+  <button class="btn" style="background:var(--ac);color:#060b14;width:100%;font-size:14px;padding:11px" onclick="doSch()">分析</button>
+  <div style="margin-top:16px;font-size:11px;color:var(--t3)"><div style="font-weight:700;margin-bottom:6px;color:var(--t2)">💡 熱門</div>${['2330 台積電','2317 鴻海','0050 元大50','AAPL Apple','NVDA Nvidia'].map(x=>{const[s,...n]=x.split(' ');return`<div style="padding:6px 8px;border-radius:6px;background:var(--card);margin-bottom:4px;cursor:pointer" onclick="document.getElementById('sSy').value='${s}'"><span style="font-weight:700">${s}</span><span style="color:var(--t3);margin-left:6px">${n.join(' ')}</span></div>`}).join('')}</div></div>`;
+  return h;
+}
+let _st='full';
+function pickT(el,id){_st=id;document.querySelectorAll('#sT button').forEach(b=>{const a=ATPL.find(t=>t.id===id);b.style.background=b.textContent===a?.l?'var(--acD)':'#111827';b.style.color=b.textContent===a?.l?'var(--ac)':'var(--t3)'})}
+function doSch(){const s=document.getElementById('sSy')?.value;if(s?.trim()){sel=null;runAI(s.trim().toUpperCase(),s.trim(),_st)}}
+
+// ── Tx ──
+function vTx(){
+  const rp=rpl();
+  let h=`<div style="padding:0 12px"><div style="font-size:16px;font-weight:800;margin-bottom:10px">📜 交易</div><div style="display:flex;gap:8px;margin-bottom:10px"><div style="flex:1;padding:10px;border-radius:8px;background:var(--acD);text-align:center"><div style="font-size:9px;color:var(--t3)">買入</div><div style="font-size:14px;font-weight:800;color:var(--ac)">${txs.filter(t=>t.type==='BUY').length}</div></div><div style="flex:1;padding:10px;border-radius:8px;background:var(--redD);text-align:center"><div style="font-size:9px;color:var(--t3)">賣出</div><div style="font-size:14px;font-weight:800;color:var(--red)">${txs.filter(t=>t.type==='SELL').length}</div></div><div style="flex:1;padding:10px;border-radius:8px;background:var(--ambD);text-align:center"><div style="font-size:9px;color:var(--t3)">已實現</div><div style="font-size:14px;font-weight:800;color:${rp>=0?'var(--ac)':'var(--red)'}">${fmtK(rp)}</div></div></div>`;
+  if(!txs.length)h+=`<div style="text-align:center;padding:30px;color:var(--t3);font-size:12px">無</div>`;
+  else txs.forEach(t=>h+=txRow(t));
+  return h+'</div>';
+}
+
+// ── Sim ──
+function vSim(){
+  const hv=sim.holdings.reduce((s,h)=>s+(gp(h.symbol)||h.avgCost)*h.shares,0),stv=sim.cash+hv,spl=stv-sim.startCash,splp=sim.startCash>0?(spl/sim.startCash)*100:0;
+  const srp=simTx.filter(t=>t.profit).reduce((s,t)=>s+t.profit,0),sw=simTx.filter(t=>t.type==='SELL'&&t.profit>0).length,sl=simTx.filter(t=>t.type==='SELL'&&t.profit<=0).length,swr=(sw+sl)>0?sw/(sw+sl)*100:0;
+
+  if(sub==='simBuy')return`<div style="padding:0 12px"><button class="back" onclick="sub=null;render()">←</button><div class="cd" style="background:var(--purD);border-color:rgba(162,155,254,.2)"><div style="font-size:14px;font-weight:700;color:var(--pur);margin-bottom:6px">🎮 模擬買入</div><div style="font-size:11px;color:var(--t2);margin-bottom:8px">可用 <span style="font-weight:800;color:var(--tx)">$${fmtK(sim.cash)}</span></div><div style="margin-bottom:8px"><label class="lb">代號 *</label><input class="inp" id="sbS" oninput="if(this.value.length>=2)searchQ(this.value)"></div><div id="sbSR"></div><div style="margin-bottom:8px"><label class="lb">名稱</label><input class="inp" id="sbN"></div><div style="margin-bottom:8px"><label class="lb">股數 *</label><input class="inp" id="sbSh" type="number"></div><div style="margin-bottom:8px"><label class="lb">價格 *</label><input class="inp" id="sbPr" type="number"></div><button class="btn" style="background:var(--pur);color:#fff;width:100%" onclick="doSB()">確認</button></div></div>`;
+  if(sub==='simSell'){let h=`<div style="padding:0 12px"><button class="back" onclick="sub=null;render()">←</button><div style="font-size:14px;font-weight:700;color:var(--pur);margin-bottom:10px">🎮 模擬賣出</div>`;if(!sim.holdings.length)h+=`<div style="text-align:center;padding:30px;color:var(--t3)">無</div>`;else sim.holdings.forEach(hd=>{const p=prices[norm(hd.symbol)],cur=p?.price||hd.avgCost;h+=`<div class="cd"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><div><div style="font-size:14px;font-weight:700">${hd.symbol}</div><div style="font-size:10px;color:var(--t2)">${fmtI(hd.shares)}股</div></div><div style="font-size:14px;font-weight:800">${fmt(cur)}</div></div><div style="display:flex;gap:4px"><input class="inp" type="number" id="ss_${hd.symbol}" placeholder="≤${hd.shares}" style="flex:1"><input class="inp" type="number" id="sp_${hd.symbol}" value="${cur}" style="flex:1"><button class="btn" style="background:var(--red);color:#fff;padding:9px 12px" onclick="doSS('${hd.symbol}',${hd.shares})">賣</button></div></div>`});return h+'</div>'}
+  if(sub==='simHist'){let h=`<div style="padding:0 12px"><button class="back" onclick="sub=null;render()">←</button>`;if(!simTx.length)h+=`<div style="text-align:center;padding:30px;color:var(--t3)">無</div>`;else simTx.forEach(t=>{h+=`<div style="padding:8px 10px;border-radius:8px;background:var(--card);border:1px solid var(--bd);margin-bottom:4px"><div style="display:flex;justify-content:space-between"><div><b>${t.symbol}</b> <span class="pl" style="color:${t.type==='BUY'?'var(--pur)':'var(--red)'};background:${t.type==='BUY'?'var(--purD)':'var(--redD)'}">${t.type==='BUY'?'模擬買':'模擬賣'}</span></div><span style="font-size:10px;color:var(--t3)">${t.time||t.date}</span></div><div style="font-size:11px;color:var(--t2);margin-top:3px">${fmtI(t.shares)}股×${fmt(t.price)}</div>${t.profit!=null?`<div style="font-size:11px;font-weight:700;color:${t.profit>=0?'var(--ac)':'var(--red)'}">${t.profit>=0?'+':''}${fmt(t.profit)}</div>`:''}</div>`});return h+'</div>'}
+
+  let h=`<div style="padding:0 12px"><div style="font-size:16px;font-weight:800;margin-bottom:10px">🎮 模擬交易</div>
+  <div class="cd" style="background:linear-gradient(135deg,#0e1525,#1a1540);border-color:rgba(162,155,254,.2)"><div style="display:flex;justify-content:space-between"><div><div style="font-size:10px;color:var(--pur);font-weight:700">模擬帳戶</div><div style="font-size:24px;font-weight:800;margin-top:4px">$${fmtK(stv)}</div><div style="font-size:12px;font-weight:700;color:${spl>=0?'var(--ac)':'var(--red)'};margin-top:2px">${spl>=0?'+':''}${fmtK(spl)} (${pct(splp)})</div></div><div style="text-align:right;font-size:10px;color:var(--t3)"><div>本金 $${fmtK(sim.startCash)}</div><div>${sim.startDate}</div></div></div>
+  <div class="g4" style="margin-top:10px">${[{l:'現金',v:'$'+fmtK(sim.cash),c:'var(--tx)'},{l:'持倉',v:'$'+fmtK(hv),c:'var(--blu)'},{l:'勝率',v:swr>0?swr.toFixed(0)+'%':'--',c:swr>=50?'var(--ac)':'var(--red)'},{l:'已實現',v:(srp>=0?'+':'')+fmtK(srp),c:srp>=0?'var(--ac)':'var(--red)'}].map(x=>`<div class="stat"><div class="sl">${x.l}</div><div class="sv" style="color:${x.c}">${x.v}</div></div>`).join('')}</div></div>
+  <div class="g2" style="margin:0 0 8px"><button class="btn" style="background:var(--purD);color:var(--pur)" onclick="sub='simBuy';render()">📥 買入</button><button class="btn" style="background:var(--redD);color:var(--red)" onclick="sub='simSell';render()">📤 賣出</button><button class="btn" style="background:var(--bluD);color:var(--blu)" onclick="sub='simHist';render()">📜 紀錄</button><button class="btn" style="background:#111827;color:var(--t3)" onclick="if(confirm('重置？'))simReset()">🔄 重置</button></div>`;
+  if(sim.holdings.length){h+=`<div style="font-size:12px;font-weight:700;margin:10px 0 6px">📦 持倉</div>`;sim.holdings.forEach(hd=>{const p=prices[norm(hd.symbol)],cur=p?.price||hd.avgCost,pl2=(cur-hd.avgCost)*hd.shares,up=pl2>=0;h+=`<div class="cd"><div style="display:flex;justify-content:space-between"><div><span style="font-size:14px;font-weight:700">${hd.symbol}</span><span class="pl" style="color:var(--pur);background:var(--purD);margin-left:6px">模擬</span><div style="font-size:10px;color:var(--t2);margin-top:2px">${fmtI(hd.shares)}股·均${fmt(hd.avgCost)}</div></div><div style="text-align:right"><div style="font-size:15px;font-weight:800">${fmt(cur)}</div><div style="font-size:12px;font-weight:700;color:${up?'var(--ac)':'var(--red)'}">${up?'+':''}${fmtK(pl2)}</div></div></div></div>`})}
+  return h+'</div>';
+}
+function doSB(){const s=document.getElementById('sbS')?.value,n=document.getElementById('sbN')?.value,sh=+document.getElementById('sbSh')?.value,pr=+document.getElementById('sbPr')?.value;if(!s||!sh||!pr){toast('❌');return}simBuy(s.toUpperCase().trim(),n||s,sh,pr);sub=null;render()}
+function doSS(sym,max){const sh=+document.getElementById('ss_'+sym)?.value,pr=+document.getElementById('sp_'+sym)?.value;if(!sh||!pr||sh>max){toast('❌');return}simSell(sym,sh,pr);sub='simSell';render()}
+
+// Shared
+function txRow(t){return`<div style="padding:8px 10px;border-radius:8px;background:var(--card);border:1px solid var(--bd);margin-bottom:4px"><div style="display:flex;justify-content:space-between"><div><b>${t.symbol}</b> <span class="pl" style="color:${t.type==='BUY'?'var(--ac)':'var(--red)'};background:${t.type==='BUY'?'var(--acD)':'var(--redD)'}">${t.type==='BUY'?'買':'賣'}</span></div><span style="font-size:10px;color:var(--t3)">${t.date}</span></div><div style="font-size:11px;color:var(--t2);margin-top:3px">${fmtI(t.shares)}股×${fmt(t.price)}</div>${t.profit!=null?`<div style="font-size:11px;font-weight:700;color:${t.profit>=0?'var(--ac)':'var(--red)'}">${t.profit>=0?'+':''}${fmt(t.profit)}</div>`:''}</div>`}
+
+// Search result dropdown - used by multiple views
+const _origRender=render;
+const origSearchQ=searchQ;
+
+// Handle search results display after render
+const observer=new MutationObserver(()=>{
+  if(searchRes.length){
+    ['addSR','sbSR'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el&&searchRes.length){
+        const fn=id==='addSR'?'fillAdd':'fillSB';
+        el.innerHTML=`<div class="sr">${searchRes.map(r=>`<div onclick="${fn}('${r.symbol}','${(r.name||'').replace(/'/g,'')}')""><b>${r.symbol}</b> <span style="color:var(--t2)">${r.name||''}</span></div>`).join('')}</div>`;
+      }
+    });
+  }
+});
+observer.observe(document.getElementById('content'),{childList:true,subtree:true});
+
+function fillSB(sym,name){searchRes=[];render();setTimeout(()=>{const s=document.getElementById('sbS');if(s)s.value=sym;const n=document.getElementById('sbN');if(n)n.value=name;fetchOne(sym).then(p=>{if(p?.price){const pr=document.getElementById('sbPr');if(pr)pr.value=p.price}})},50)}
+
+// Init
+render();
+startAuto();
+</script>
+</body>
+</html>
