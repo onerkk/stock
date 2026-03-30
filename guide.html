@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="theme-color" content="#0a0e17">
+<title>Stock Tracker 使用說明</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0e17;color:#e4e8f1;font-family:'Noto Sans TC',sans-serif;max-width:480px;margin:0 auto;min-height:100vh;overflow-x:hidden}
+.hero{text-align:center;padding:48px 20px 32px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-60px;left:50%;transform:translateX(-50%);width:300px;height:300px;background:radial-gradient(circle,rgba(0,232,162,.12),transparent 70%);pointer-events:none}
+.hero-icon{font-size:56px;margin-bottom:12px;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.hero h1{font-size:32px;font-weight:900;background:linear-gradient(135deg,#00e8a2,#4dabf7);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:14px;color:#7b8db5;margin-top:8px;line-height:1.6}
+.hero .badge{display:inline-block;margin-top:10px;padding:4px 14px;border-radius:20px;background:rgba(0,232,162,.1);border:1px solid rgba(0,232,162,.2);font-size:11px;color:#00e8a2;font-weight:700}
+.toc{position:sticky;top:0;z-index:50;background:rgba(10,14,23,.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);padding:10px 16px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid rgba(26,39,68,.6)}
+.toc::-webkit-scrollbar{display:none}
+.toc a{flex-shrink:0;padding:6px 14px;border-radius:20px;background:#0e1525;border:1px solid #1a2744;font-size:11px;font-weight:700;color:#7b8db5;text-decoration:none;white-space:nowrap}
+.step{margin:16px;scroll-margin-top:60px}
+.step-label{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.step-num{width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,#00e8a2,#00b894);color:#060b14;font-size:16px;font-weight:900;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,232,162,.3);flex-shrink:0}
+.step-title{font-size:17px;font-weight:900}
+.phone-wrap{position:relative;margin:0 auto 16px;width:280px}
+.phone-frame{border-radius:32px;border:4px solid #2a3555;background:#060b14;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.05)}
+.phone-notch{height:24px;background:#0a0e17;display:flex;align-items:center;justify-content:center}
+.phone-notch span{width:48px;height:5px;border-radius:3px;background:#1a2744}
+.phone-screen{width:100%;display:block}
+.phone-home{height:20px;background:#0a0e17;display:flex;align-items:center;justify-content:center}
+.phone-home span{width:80px;height:4px;border-radius:2px;background:#1a2744}
+.tip-overlay{position:absolute;z-index:10}
+.tip-box{background:#fff;border-radius:12px;padding:10px 14px;box-shadow:0 8px 32px rgba(0,0,0,.4);display:flex;align-items:flex-start;gap:8px;max-width:240px;animation:tipIn .4s ease both}
+@keyframes tipIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.tip-icon{font-size:20px;flex-shrink:0}
+.tip-text{font-size:12px;font-weight:700;color:#1a1a2e;line-height:1.5}
+.tip-text .hl{color:#00b894;font-weight:900}
+.arrow-down{position:absolute;z-index:10;display:flex;flex-direction:column;align-items:center}
+.arrow-down::after{content:'';width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:14px solid #fff;animation:ab 1.2s ease infinite;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))}
+.arrow-down::before{content:'';width:3px;height:20px;background:#fff;border-radius:2px;margin-bottom:2px}
+@keyframes ab{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+.finger{position:absolute;z-index:12;font-size:28px;animation:ft 2s ease infinite;filter:drop-shadow(0 4px 8px rgba(0,0,0,.4))}
+@keyframes ft{0%,100%{transform:scale(1)}40%{transform:scale(.9) translate(2px,4px)}60%{transform:scale(1)}}
+.desc{padding:0 4px;font-size:13px;color:#7b8db5;line-height:1.8;margin-bottom:8px}
+.desc b{color:#e4e8f1}
+.info{margin:8px 0;padding:12px 14px;border-radius:12px;display:flex;gap:8px;align-items:flex-start}
+.info.g{background:rgba(0,232,162,.06);border:1px solid rgba(0,232,162,.15)}.info.g .it{color:#00e8a2}
+.info.a{background:rgba(255,179,71,.06);border:1px solid rgba(255,179,71,.15)}.info.a .it{color:#ffb347}
+.info.b{background:rgba(77,171,247,.06);border:1px solid rgba(77,171,247,.15)}.info.b .it{color:#4dabf7}
+.info.r{background:rgba(255,77,106,.06);border:1px solid rgba(255,77,106,.15)}.info.r .it{color:#ff4d6a}
+.ii{font-size:18px;flex-shrink:0}.it{font-size:11px;line-height:1.7;font-weight:600}
+.dv{height:1px;background:linear-gradient(90deg,transparent,#1a2744,transparent);margin:24px 16px}
+.feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px;margin:16px 0}
+.feat{padding:14px 10px;border-radius:14px;background:#0e1525;border:1px solid #1a2744;text-align:center}
+.fe{font-size:28px;margin-bottom:6px}.fn{font-size:12px;font-weight:800}.fs{font-size:9px;color:#7b8db5;margin-top:3px}
+.faq{margin:16px}.faq-i{margin-bottom:12px;padding:14px;border-radius:12px;background:#0e1525;border:1px solid #1a2744}
+.fq{font-size:13px;font-weight:800;margin-bottom:4px}.fa{font-size:11px;color:#7b8db5;line-height:1.7}
+.footer{text-align:center;padding:40px 16px 48px;color:#3d4f6f}
+.footer a{display:inline-block;margin-top:12px;padding:12px 32px;border-radius:14px;background:linear-gradient(135deg,#00e8a2,#00b894);color:#060b14;font-size:14px;font-weight:800;text-decoration:none;box-shadow:0 8px 24px rgba(0,232,162,.3)}
+</style>
+</head>
+<body>
+<div class="hero"><div class="hero-icon">📈</div><h1>Stock Tracker</h1><p>即時行情 · AI 智慧分析 · 模擬交易<br>一站搞定你的投資需求</p><div class="badge">v6 使用說明書</div></div>
+<div class="toc"><a href="#s1">🌍大盤</a><a href="#s2">➕買入</a><a href="#s3">📊實盤</a><a href="#s4">🤖AI</a><a href="#s5">🎮模擬</a><a href="#s6">👁️觀察</a><a href="#s7">📜紀錄</a><a href="#s8">🔔到價</a><a href="#s9">🌙主題</a><a href="#s10">📱安裝</a></div>
+<div class="feat-grid"><div class="feat"><div class="fe">🌍</div><div class="fn">全球指數</div><div class="fs">10大指數 即時更新</div></div><div class="feat"><div class="fe">🤖</div><div class="fn">AI 分析</div><div class="fs">6種模板 搜尋最新資訊</div></div><div class="feat"><div class="fe">📈</div><div class="fn">K線走勢</div><div class="fs">日K 週K 月K 分K</div></div><div class="feat"><div class="fe">🎮</div><div class="fn">模擬交易</div><div class="fs">虛擬100萬練手</div></div><div class="feat"><div class="fe">🔔</div><div class="fn">到價通知</div><div class="fs">漲到/跌到自動提醒</div></div><div class="feat"><div class="fe">📱</div><div class="fn">桌面安裝</div><div class="fs">像App一樣使用</div></div></div>
+<div class="dv"></div>
+
+<div class="step" id="s1"><div class="step-label"><div class="step-num">1</div><div class="step-title">🌍 查看全球指數</div></div>
+<div class="desc">打開網站，首頁就是<b>全球指數看板</b>。加權、道瓊、那斯達克、費半、美元、日韓中等 10 大指數即時顯示，每 15 秒自動更新。</div>
+<div class="phone-wrap"><div class="phone-frame"><div class="phone-notch"><span></span></div><img class="phone-screen" src="s-market.jpg" alt="大盤"><div class="phone-home"><span></span></div></div>
+<div class="tip-overlay" style="top:50px;left:-10px"><div class="tip-box"><span class="tip-icon">⚠️</span><div class="tip-text">點「安裝」可加到桌面！</div></div></div>
+<div class="arrow-down" style="top:106px;left:128px"></div>
+<div class="finger" style="bottom:220px;right:15px">👆</div></div>
+<div class="info g"><div class="ii">⚡</div><div class="it">頂部跑馬燈即時滾動各大指數。紅色=跌、綠色=漲。可按 ⏸ 暫停或 ⟳ 手動刷新。</div></div></div>
+<div class="dv"></div>
+
+<div class="step" id="s2"><div class="step-label"><div class="step-num">2</div><div class="step-title">➕ 新增一支持股</div></div>
+<div class="desc">點底部「<b>➕ 買入</b>」，輸入股票代號。<b>停 1 秒後自動帶入名稱和即時價格</b>，台股自動顯示中文名。</div>
+<div class="phone-wrap"><div class="phone-frame"><div class="phone-notch"><span></span></div><img class="phone-screen" src="s-buy.jpg" alt="買入"><div class="phone-home"><span></span></div></div>
+<div class="tip-overlay" style="top:40px;right:-5px"><div class="tip-box"><span class="tip-icon">⚠️</span><div class="tip-text">輸入代號後<br><span class="hl">名稱+價格自動帶入</span></div></div></div>
+<div class="arrow-down" style="top:100px;left:60px"></div>
+<div class="finger" style="bottom:70px;left:120px">👆</div></div>
+<div class="info a"><div class="ii">💡</div><div class="it">台股→輸數字代號（2330、0050）<br>美股→輸英文代碼（AAPL、NVDA）<br>可選產業分類，方便統計配置比例。</div></div></div>
+<div class="dv"></div>
+
+<div class="step" id="s3"><div class="step-label"><div class="step-num">3</div><div class="step-title">📊 管理你的持倉</div></div>
+<div class="desc">在「<b>📊 實盤</b>」查看持倉。顯示<b>總市值、未實現損益、已實現損益</b>。點擊持股進入詳情頁→走勢圖、AI分析、賣出、到價提醒。</div>
+<div class="phone-wrap"><div class="phone-frame"><div class="phone-notch"><span></span></div><img class="phone-screen" src="s-port.jpg" alt="實盤"><div class="phone-home"><span></span></div></div>
+<div class="tip-overlay" style="top:60px;left:-5px"><div class="tip-box"><span class="tip-icon">⚠️</span><div class="tip-text"><span class="hl">點擊股票</span>進入詳情</div></div></div>
+<div class="arrow-down" style="bottom:170px;left:130px"></div>
+<div class="finger" style="bottom:130px;right:20px">👆</div></div>
+<div class="info b"><div class="ii">📊</div><div class="it">詳情頁包含：今高/今低/成交量/52週高低<br>K線走勢圖（日K/週K/月K/5分/15分/60分）<br>AI分析、賣出、到價提醒、交易紀錄</div></div></div>
+<div class="dv"></div>
+
+<div class="step" id="s4"><div class="step-label"><div class="step-num">4</div><div class="step-title">🤖 AI 智慧分析</div></div>
+<div class="desc">點底部「<b>🤖 分析</b>」，輸入股票代號。AI <b>即時搜尋最新新聞</b>，產出專業分析報告。</div>
+<div class="phone-wrap"><div class="phone-frame"><div class="phone-notch"><span></span></div><img class="phone-screen" src="s-ai.jpg" alt="AI分析"><div class="phone-home"><span></span></div></div>
+<div class="tip-overlay" style="top:50px;left:-5px"><div class="tip-box"><span class="tip-icon">⚠️</span><div class="tip-text">選模板→輸代號→點<span class="hl">分析</span></div></div></div>
+<div class="arrow-down" style="top:135px;left:60px"></div>
+<div class="finger" style="bottom:240px;left:120px">👆</div></div>
+<div class="info a"><div class="ii">🤖</div><div class="it"><b>6 種分析模板：</b><br>📊 完整分析 — 基本面+技術面+新聞+建議<br>📰 近期新聞 — 一週重大消息<br>📈 技術面 — 均線/RSI/MACD/支撐壓力<br>⚖️ 同業比較 — PE/PB/毛利率比較<br>💰 殖利率 — 配息歷史/存股建議<br>⚠️ 風險評估 — 下行風險/停損價位</div></div>
+<div class="info r"><div class="ii">⚠️</div><div class="it">AI 分析僅供參考，不構成投資建議。</div></div></div>
+<div class="dv"></div>
+
+<div class="step" id="s5"><div class="step-label"><div class="step-num">5</div><div class="step-title">🎮 模擬交易練手</div></div>
+<div class="desc">用<b>虛擬 100 萬</b>練習買賣。系統自動統計<b>勝率、最佳/最差交易</b>。</div>
+<div class="phone-wrap"><div class="phone-frame"><div class="phone-notch"><span></span></div><img class="phone-screen" src="s-sim.jpg" alt="模擬"><div class="phone-home"><span></span></div></div>
+<div class="tip-overlay" style="top:50px;right:-5px"><div class="tip-box"><span class="tip-icon">⚠️</span><div class="tip-text">虛擬帳戶<br><span class="hl">$100萬</span>練習用</div></div></div>
+<div class="finger" style="bottom:200px;left:60px">👆</div></div>
+<div class="info g"><div class="ii">🎮</div><div class="it">模擬與實盤完全獨立。可隨時「重置」重來。</div></div></div>
+<div class="dv"></div>
+
+<div class="step" id="s6"><div class="step-label"><div class="step-num">6</div><div class="step-title">👁️ 觀察名單</div></div>
+<div class="desc">還沒想買但想追蹤的股票，加到觀察名單。即時看漲跌，也可直接做 AI 分析。</div>
+<div class="phone-wrap"><div class="phone-frame"><div class="phone-notch"><span></span></div><img class="phone-screen" src="s-watch.jpg" alt="觀察"><div class="phone-home"><span></span></div></div>
+<div class="tip-overlay" style="top:50px;left:-5px"><div class="tip-box"><span class="tip-icon">⚠️</span><div class="tip-text">輸入代號→點 <span class="hl">+</span> 加入</div></div></div>
+<div class="arrow-down" style="top:100px;right:32px"></div></div></div>
+<div class="dv"></div>
+
+<div class="step" id="s7"><div class="step-label"><div class="step-num">7</div><div class="step-title">📜 交易紀錄</div></div>
+<div class="desc">所有買入、賣出紀錄。自動統計<b>買入次數、賣出次數、已實現損益</b>。</div>
+<div class="phone-wrap"><div class="phone-frame"><div class="phone-notch"><span></span></div><img class="phone-screen" src="s-tx.jpg" alt="紀錄"><div class="phone-home"><span></span></div></div>
+<div class="tip-overlay" style="top:50px;right:-5px"><div class="tip-box"><span class="tip-icon">⚠️</span><div class="tip-text">完整買賣紀錄<br>自動統計損益</div></div></div></div></div>
+<div class="dv"></div>
+
+<div class="step" id="s8"><div class="step-label"><div class="step-num">8</div><div class="step-title">🔔 到價提醒</div></div>
+<div class="desc">在股票詳情頁底部設定「<b>漲到XX通知</b>」或「<b>跌到XX通知</b>」，觸發時跳出瀏覽器通知。</div>
+<div style="margin:12px 16px;padding:16px;border-radius:16px;background:#0e1525;border:1px solid #1a2744">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:20px">🔔</span><span style="font-weight:800">到價提醒</span></div>
+<div style="display:flex;gap:6px;margin-bottom:8px">
+<div style="flex:1;padding:8px 10px;border-radius:8px;background:#080e1a;border:1px solid #1a2744;font-size:12px;color:#7b8db5">▲ 漲到 <span style="color:#00e8a2;font-weight:800">1,900</span></div>
+<div style="flex:1;padding:8px 10px;border-radius:8px;background:#080e1a;border:1px solid #1a2744;font-size:12px;color:#7b8db5">▼ 跌到 <span style="color:#ff4d6a;font-weight:800">1,700</span></div>
+<div style="padding:8px 14px;border-radius:8px;background:#00e8a2;color:#060b14;font-weight:800;font-size:14px">+</div></div>
+<div style="padding:10px;border-radius:10px;background:rgba(255,179,71,.08);border:1px solid rgba(255,179,71,.15);font-size:12px;color:#ffb347;font-weight:700;text-align:center">🔔 2330 台積電漲到 1,900！觸發時跳出通知</div></div>
+<div class="info a" style="margin:0 16px"><div class="ii">💡</div><div class="it">需保持瀏覽器開啟。股價每15秒檢查。<br>第一次使用需允許通知權限。</div></div></div>
+<div class="dv"></div>
+
+<div class="step" id="s9"><div class="step-label"><div class="step-num">9</div><div class="step-title">🌙 深色 / 淺色切換</div></div>
+<div class="desc">右上角 🌙 按鈕切換。設定自動記住。</div>
+<div style="display:flex;gap:16px;justify-content:center;margin:20px 0">
+<div style="text-align:center"><div style="width:110px;height:70px;border-radius:14px;background:#060b14;border:3px solid #1a2744;display:flex;align-items:center;justify-content:center;font-size:12px;color:#00e8a2;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,.4)">🌙 深色模式</div><div style="font-size:10px;color:#7b8db5;margin-top:6px">護眼 · 省電</div></div>
+<div style="font-size:24px;color:#3d4f6f;align-self:center">⇄</div>
+<div style="text-align:center"><div style="width:110px;height:70px;border-radius:14px;background:#f0f2f5;border:3px solid #dde1e6;display:flex;align-items:center;justify-content:center;font-size:12px;color:#1a1a2e;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,.2)">☀️ 淺色模式</div><div style="font-size:10px;color:#7b8db5;margin-top:6px">日間 · 清爽</div></div></div></div>
+<div class="dv"></div>
+
+<div class="step" id="s10"><div class="step-label"><div class="step-num">10</div><div class="step-title">📱 安裝到手機桌面</div></div>
+<div class="desc">安裝後從桌面開啟，全螢幕顯示，像原生App。</div>
+<div style="margin:12px 16px;padding:16px;border-radius:14px;background:#0e1525;border:1px solid #1a2744">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:22px">🤖</span><span style="font-size:14px;font-weight:800">Android / Chrome</span></div>
+<div style="font-size:12px;color:#7b8db5;line-height:2">① 首頁出現「安裝到桌面」→ 點 <b style="color:#00e8a2">安裝</b><br>② 或點瀏覽器 ⋯ →「加到主畫面」</div></div>
+<div style="margin:12px 16px;padding:16px;border-radius:14px;background:#0e1525;border:1px solid #1a2744">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:22px">🍎</span><span style="font-size:14px;font-weight:800">iPhone / Safari</span></div>
+<div style="font-size:12px;color:#7b8db5;line-height:2">① 用 Safari 打開網站<br>② 點下方 <b style="color:#4dabf7">分享按鈕</b>（⬆️）<br>③ 選「<b style="color:#4dabf7">加入主畫面</b>」→ 新增</div></div></div>
+<div class="dv"></div>
+
+<div style="padding:0 16px;margin-bottom:8px"><div style="font-size:18px;font-weight:900">❓ 常見問題</div></div>
+<div class="faq">
+<div class="faq-i"><div class="fq">❓ 股價多久更新？</div><div class="fa">每15秒自動更新。按⏸暫停，⟳手動刷新。</div></div>
+<div class="faq-i"><div class="fq">❓ 資料存在哪裡？</div><div class="fa">存在手機瀏覽器（localStorage）。清除瀏覽資料會消失，建議截圖備份。</div></div>
+<div class="faq-i"><div class="fq">❓ AI 分析要付費嗎？</div><div class="fa">使用者免費。每次分析約0.1台幣（站長負擔）。</div></div>
+<div class="faq-i"><div class="fq">❓ 支援哪些股票？</div><div class="fa">台股（2330）、美股（AAPL）、ETF、全球指數。100+台股自動顯示中文名。</div></div>
+<div class="faq-i"><div class="fq">❓ 模擬交易的錢是真的嗎？</div><div class="fa">不是。虛擬100萬練習用，不涉及真金白銀。</div></div>
+<div class="faq-i"><div class="fq">❓ 為什麼有些股票顯示英文？</div><div class="fa">已內建100+常用台股中文名。冷門股票會顯示Yahoo Finance原始英文名。</div></div></div>
+
+<div class="footer"><div style="font-size:11px">📈 Stock Tracker v6</div><div style="font-size:10px;margin-top:4px">即時行情 · AI分析 · 模擬交易</div><a href="https://onerkk.github.io/stock">👉 立即使用</a></div>
+</body></html>
