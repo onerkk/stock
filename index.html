@@ -8,7 +8,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Stock Tracker v3</title>
+<title>Stock Tracker v4</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{--bg:#060b14;--card:#0e1525;--ac:#00e8a2;--acD:rgba(0,232,162,.1);--red:#ff4d6a;--redD:rgba(255,77,106,.1);--amb:#ffb347;--ambD:rgba(255,179,71,.1);--blu:#4dabf7;--bluD:rgba(77,171,247,.1);--pur:#a29bfe;--purD:rgba(162,155,254,.12);--tx:#e4e8f1;--t2:#7b8db5;--t3:#3d4f6f;--bd:#1a2744}
@@ -71,7 +71,7 @@ input{font-family:inherit;outline:none}
 </style>
 </head>
 <body>
-<div class="hd"><h1>📈 Stock Tracker <span style="font-size:10px;font-weight:400;color:var(--t3)">v3</span></h1><p id="hdSub"></p></div>
+<div class="hd"><h1>📈 Stock Tracker <span style="font-size:10px;font-weight:400;color:var(--t3)">v4</span></h1><p id="hdSub"></p></div>
 <div id="ticker"></div>
 <div id="content"></div>
 <div id="toastEl" class="toast" style="display:none"></div>
@@ -152,8 +152,6 @@ async function refreshAll(){await fetchIdx();const s=allSyms();if(s.length)await
 function startAuto(){if(timer)clearInterval(timer);if(autoOn){refreshAll();timer=setInterval(refreshAll,15000)}}
 
 // ── AI ──
-async function runAI(sym,name,tid){
-
 // ── CHART ──
 async function loadChart(sym,range,interval){
   chartLoading=true;chartData=null;chartRange=range;chartInterval=interval;render();
@@ -163,10 +161,10 @@ async function loadChart(sym,range,interval){
 }
 function drawChart(){
   const cv=document.getElementById('chartCv');if(!cv||!chartData||!chartData.bars.length)return;
-  const ctx=cv.getContext('2d'),dpr=window.devicePixelRatio||1;
+  const cx=cv.getContext('2d'),dpr=window.devicePixelRatio||1;
   const W2=cv.parentElement.clientWidth,H=260,VH=50;
   cv.width=W2*dpr;cv.height=H*dpr;cv.style.width=W2+'px';cv.style.height=H+'px';
-  ctx.scale(dpr,dpr);
+  cx.scale(dpr,dpr);
   const bars=chartData.bars,len=bars.length;
   const bw=Math.max(1,Math.floor((W2-40)/len)-1),gap=1;
   const prices2=bars.map(b=>[b.h,b.l]).flat().filter(v=>v!=null);
@@ -175,48 +173,23 @@ function drawChart(){
   const pH=H-VH-20,pTop=10;
   const py=(p)=>pTop+pH-(p-pMin)/(pMax-pMin)*pH;
   const vy=(v)=>H-v/vMax*VH;
-
-  // Background
-  ctx.fillStyle='#0e1525';ctx.fillRect(0,0,W2,H);
-
-  // Grid lines
-  ctx.strokeStyle='#1a2744';ctx.lineWidth=0.5;
-  for(let i=0;i<=4;i++){const y=pTop+pH*i/4;ctx.beginPath();ctx.moveTo(30,y);ctx.lineTo(W2,y);ctx.stroke();
-    const pv=pMax-(pMax-pMin)*i/4;ctx.fillStyle='#3d4f6f';ctx.font='9px sans-serif';ctx.textAlign='left';ctx.fillText(pv>=1000?Math.round(pv).toLocaleString():pv.toFixed(2),0,y+3)}
-
-  // MA lines
+  cx.fillStyle='#0e1525';cx.fillRect(0,0,W2,H);
+  cx.strokeStyle='#1a2744';cx.lineWidth=0.5;
+  for(let i=0;i<=4;i++){const y=pTop+pH*i/4;cx.beginPath();cx.moveTo(30,y);cx.lineTo(W2,y);cx.stroke();
+    const pv=pMax-(pMax-pMin)*i/4;cx.fillStyle='#3d4f6f';cx.font='9px sans-serif';cx.textAlign='left';cx.fillText(pv>=1000?Math.round(pv).toLocaleString():pv.toFixed(2),0,y+3)}
   const ma=(n)=>{const r=[];for(let i=0;i<len;i++){if(i<n-1){r.push(null);continue}let s=0;for(let j=i-n+1;j<=i;j++)s+=bars[j].c;r.push(s/n)}return r};
-  const drawMa=(n,color)=>{const m=ma(n);ctx.strokeStyle=color;ctx.lineWidth=1;ctx.beginPath();let started=false;
-    for(let i=0;i<len;i++){if(m[i]==null)continue;const x=30+(bw+gap)*i+bw/2,y=py(m[i]);if(!started){ctx.moveTo(x,y);started=true}else ctx.lineTo(x,y)}ctx.stroke()};
-  if(len>=5)drawMa(5,'#ffa502');
-  if(len>=20)drawMa(20,'#4dabf7');
-  if(len>=60)drawMa(60,'#a29bfe');
-
-  // Candles + Volume
+  const drawMa=(n,color)=>{const m=ma(n);cx.strokeStyle=color;cx.lineWidth=1;cx.beginPath();let started=false;
+    for(let i=0;i<len;i++){if(m[i]==null)continue;const x=30+(bw+gap)*i+bw/2,y=py(m[i]);if(!started){cx.moveTo(x,y);started=true}else cx.lineTo(x,y)}cx.stroke()};
+  if(len>=5)drawMa(5,'#ffa502');if(len>=20)drawMa(20,'#4dabf7');if(len>=60)drawMa(60,'#a29bfe');
   for(let i=0;i<len;i++){
-    const b=bars[i],x=30+(bw+gap)*i;
-    const up=b.c>=b.o,col=up?'#00e8a2':'#ff4d6a';
-    // Volume bar
-    ctx.fillStyle=up?'rgba(0,232,162,0.3)':'rgba(255,77,106,0.3)';
-    ctx.fillRect(x,vy(b.v),bw,H-vy(b.v));
-    // Wick
-    ctx.strokeStyle=col;ctx.lineWidth=1;ctx.beginPath();
-    ctx.moveTo(x+bw/2,py(b.h));ctx.lineTo(x+bw/2,py(b.l));ctx.stroke();
-    // Body
-    ctx.fillStyle=col;
-    const oY=py(b.o),cY=py(b.c);
-    const bodyH=Math.max(1,Math.abs(cY-oY));
-    ctx.fillRect(x,Math.min(oY,cY),bw,bodyH);
+    const b=bars[i],x=30+(bw+gap)*i;const up=b.c>=b.o,col=up?'#00e8a2':'#ff4d6a';
+    cx.fillStyle=up?'rgba(0,232,162,0.3)':'rgba(255,77,106,0.3)';cx.fillRect(x,vy(b.v),bw,H-vy(b.v));
+    cx.strokeStyle=col;cx.lineWidth=1;cx.beginPath();cx.moveTo(x+bw/2,py(b.h));cx.lineTo(x+bw/2,py(b.l));cx.stroke();
+    cx.fillStyle=col;const oY=py(b.o),cY=py(b.c);cx.fillRect(x,Math.min(oY,cY),bw,Math.max(1,Math.abs(cY-oY)));
   }
-
-  // MA legend
-  ctx.font='9px sans-serif';
-  const legends=[{n:'MA5',c:'#ffa502'},{n:'MA20',c:'#4dabf7'},{n:'MA60',c:'#a29bfe'}];
-  let lx=35;
-  legends.forEach(l=>{ctx.fillStyle=l.c;ctx.fillRect(lx,H-12,8,8);ctx.fillStyle='#7b8db5';ctx.fillText(l.n,lx+10,H-5);lx+=45});
+  cx.font='9px sans-serif';let lx=35;
+  [{n:'MA5',c:'#ffa502'},{n:'MA20',c:'#4dabf7'},{n:'MA60',c:'#a29bfe'}].forEach(l=>{cx.fillStyle=l.c;cx.fillRect(lx,H-12,8,8);cx.fillStyle='#7b8db5';cx.fillText(l.n,lx+10,H-5);lx+=45});
 }
-
-// Chart period configs
 const CHART_PERIODS=[
   {label:'日K',range:'6mo',interval:'1d'},
   {label:'週K',range:'2y',interval:'1wk'},
@@ -225,6 +198,9 @@ const CHART_PERIODS=[
   {label:'15分',range:'5d',interval:'15m'},
   {label:'60分',range:'1mo',interval:'60m'},
 ];
+
+// ── AI ──
+async function runAI(sym,name,tid){
   aLoad=true;aRes='';view='analysis';render();
   const h=port.find(s=>s.symbol===sym);const p=prices[norm(sym)];
   const ctx=`持倉：${h?h.shares+'股均'+h.avgCost:'未持有'}\n${p?'即時價'+p.price+' 漲跌'+p.change+'('+p.changePct+'%) 量'+(p.volume||0)+' 52W高'+p.fiftyTwoWeekHigh+' 低'+p.fiftyTwoWeekLow:''}`;
