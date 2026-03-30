@@ -352,9 +352,23 @@ function vPort(){
 }
 
 // ── Add ──
+let _addTimer=null;
+function autoFill(val){
+  clearTimeout(_addTimer);
+  if(val.length>=2)searchQ(val);
+  if(val.length>=1){
+    _addTimer=setTimeout(async()=>{
+      const p=await fetchOne(val);
+      if(p&&!p.error){
+        const nm=document.getElementById('addNm');if(nm&&!nm.value)nm.value=p.name||'';
+        const pr=document.getElementById('addPr');if(pr&&!pr.value)pr.value=p.price||'';
+      }
+    },800);
+  }
+}
 function vAdd(){
   return`<div style="padding:0 12px"><div style="font-size:16px;font-weight:800;margin-bottom:12px">📥 買入</div>
-  <div style="margin-bottom:10px"><label class="lb">代號 *</label><input class="inp" id="addSym" placeholder="2330 / AAPL" oninput="if(this.value.length>=2)searchQ(this.value)"><div id="addSR"></div></div>
+  <div style="margin-bottom:10px"><label class="lb">代號 *</label><input class="inp" id="addSym" placeholder="2330 / AAPL" oninput="autoFill(this.value)"><div id="addSR"></div></div>
   <div style="margin-bottom:10px"><label class="lb">名稱 *</label><input class="inp" id="addNm" placeholder="台積電"></div>
   <div style="margin-bottom:10px"><label class="lb">股數 *</label><input class="inp" id="addSh" type="number" placeholder="1000"></div>
   <div style="margin-bottom:10px"><label class="lb">買入價 *</label><input class="inp" id="addPr" type="number" placeholder="即時價"></div>
@@ -367,7 +381,7 @@ function vAdd(){
 let _sec='其他';
 function pickSec(el,s){_sec=s;document.querySelectorAll('#addSec button').forEach(b=>{const n=b.textContent;b.style.background=n===s?(SECTORS[n]||'#ddd')+'33':'#111827';b.style.color=n===s?(SECTORS[n]||'#ddd'):'var(--t3)'})}
 function doAdd(){const sym=document.getElementById('addSym')?.value,nm=document.getElementById('addNm')?.value,sh=document.getElementById('addSh')?.value,pr=document.getElementById('addPr')?.value;if(!sym||!sh||!pr){toast('❌ 必填');return}addStock({symbol:sym,name:nm||sym,shares:sh,price:pr,date:document.getElementById('addDt')?.value,note:document.getElementById('addNo')?.value,sector:_sec})}
-function fillAdd(sym,name){searchRes=[];const s=document.getElementById('addSym');if(s)s.value=sym;const n=document.getElementById('addNm');if(n)n.value=name;const sr=document.getElementById('addSR');if(sr)sr.innerHTML='';fetchOne(sym).then(p=>{if(p?.price){const pr=document.getElementById('addPr');if(pr)pr.value=p.price}})}
+function fillAdd(sym,name){searchRes=[];const s=document.getElementById('addSym');if(s)s.value=sym;const n=document.getElementById('addNm');if(n)n.value=name;const sr=document.getElementById('addSR');if(sr)sr.innerHTML='';fetchOne(sym).then(p=>{if(p&&!p.error){const pr=document.getElementById('addPr');if(pr)pr.value=p.price;const nm=document.getElementById('addNm');if(nm&&!nm.value)nm.value=p.name||'';}})}
 
 // ── Detail ──
 function vDetail(){
@@ -425,7 +439,7 @@ function vSim(){
   const hv=sim.holdings.reduce((s,h)=>s+(gp(h.symbol)||h.avgCost)*h.shares,0),stv=sim.cash+hv,spl=stv-sim.startCash,splp=sim.startCash>0?(spl/sim.startCash)*100:0;
   const srp=simTx.filter(t=>t.profit).reduce((s,t)=>s+t.profit,0),sw=simTx.filter(t=>t.type==='SELL'&&t.profit>0).length,sl=simTx.filter(t=>t.type==='SELL'&&t.profit<=0).length,swr=(sw+sl)>0?sw/(sw+sl)*100:0;
 
-  if(sub==='simBuy')return`<div style="padding:0 12px"><button class="back" onclick="sub=null;render()">←</button><div class="cd" style="background:var(--purD);border-color:rgba(162,155,254,.2)"><div style="font-size:14px;font-weight:700;color:var(--pur);margin-bottom:6px">🎮 模擬買入</div><div style="font-size:11px;color:var(--t2);margin-bottom:8px">可用 <span style="font-weight:800;color:var(--tx)">$${fmtK(sim.cash)}</span></div><div style="margin-bottom:8px"><label class="lb">代號 *</label><input class="inp" id="sbS" oninput="if(this.value.length>=2)searchQ(this.value)"></div><div id="sbSR"></div><div style="margin-bottom:8px"><label class="lb">名稱</label><input class="inp" id="sbN"></div><div style="margin-bottom:8px"><label class="lb">股數 *</label><input class="inp" id="sbSh" type="number"></div><div style="margin-bottom:8px"><label class="lb">價格 *</label><input class="inp" id="sbPr" type="number"></div><button class="btn" style="background:var(--pur);color:#fff;width:100%" onclick="doSB()">確認</button></div></div>`;
+  if(sub==='simBuy')return`<div style="padding:0 12px"><button class="back" onclick="sub=null;render()">←</button><div class="cd" style="background:var(--purD);border-color:rgba(162,155,254,.2)"><div style="font-size:14px;font-weight:700;color:var(--pur);margin-bottom:6px">🎮 模擬買入</div><div style="font-size:11px;color:var(--t2);margin-bottom:8px">可用 <span style="font-weight:800;color:var(--tx)">$${fmtK(sim.cash)}</span></div><div style="margin-bottom:8px"><label class="lb">代號 *</label><input class="inp" id="sbS" oninput="autoFillSim(this.value)"></div><div id="sbSR"></div><div style="margin-bottom:8px"><label class="lb">名稱</label><input class="inp" id="sbN"></div><div style="margin-bottom:8px"><label class="lb">股數 *</label><input class="inp" id="sbSh" type="number"></div><div style="margin-bottom:8px"><label class="lb">價格 *</label><input class="inp" id="sbPr" type="number"></div><button class="btn" style="background:var(--pur);color:#fff;width:100%" onclick="doSB()">確認</button></div></div>`;
   if(sub==='simSell'){let h=`<div style="padding:0 12px"><button class="back" onclick="sub=null;render()">←</button><div style="font-size:14px;font-weight:700;color:var(--pur);margin-bottom:10px">🎮 模擬賣出</div>`;if(!sim.holdings.length)h+=`<div style="text-align:center;padding:30px;color:var(--t3)">無</div>`;else sim.holdings.forEach(hd=>{const p=prices[norm(hd.symbol)],cur=p?.price||hd.avgCost;h+=`<div class="cd"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><div><div style="font-size:14px;font-weight:700">${hd.symbol}</div><div style="font-size:10px;color:var(--t2)">${fmtI(hd.shares)}股</div></div><div style="font-size:14px;font-weight:800">${fmt(cur)}</div></div><div style="display:flex;gap:4px"><input class="inp" type="number" id="ss_${hd.symbol}" placeholder="≤${hd.shares}" style="flex:1"><input class="inp" type="number" id="sp_${hd.symbol}" value="${cur}" style="flex:1"><button class="btn" style="background:var(--red);color:#fff;padding:9px 12px" onclick="doSS('${hd.symbol}',${hd.shares})">賣</button></div></div>`});return h+'</div>'}
   if(sub==='simHist'){let h=`<div style="padding:0 12px"><button class="back" onclick="sub=null;render()">←</button>`;if(!simTx.length)h+=`<div style="text-align:center;padding:30px;color:var(--t3)">無</div>`;else simTx.forEach(t=>{h+=`<div style="padding:8px 10px;border-radius:8px;background:var(--card);border:1px solid var(--bd);margin-bottom:4px"><div style="display:flex;justify-content:space-between"><div><b>${t.symbol}</b> <span class="pl" style="color:${t.type==='BUY'?'var(--pur)':'var(--red)'};background:${t.type==='BUY'?'var(--purD)':'var(--redD)'}">${t.type==='BUY'?'模擬買':'模擬賣'}</span></div><span style="font-size:10px;color:var(--t3)">${t.time||t.date}</span></div><div style="font-size:11px;color:var(--t2);margin-top:3px">${fmtI(t.shares)}股×${fmt(t.price)}</div>${t.profit!=null?`<div style="font-size:11px;font-weight:700;color:${t.profit>=0?'var(--ac)':'var(--red)'}">${t.profit>=0?'+':''}${fmt(t.profit)}</div>`:''}</div>`});return h+'</div>'}
 
@@ -442,7 +456,21 @@ function doSS(sym,max){const sh=+document.getElementById('ss_'+sym)?.value,pr=+d
 // Shared
 function txRow(t){return`<div style="padding:8px 10px;border-radius:8px;background:var(--card);border:1px solid var(--bd);margin-bottom:4px"><div style="display:flex;justify-content:space-between"><div><b>${t.symbol}</b> <span class="pl" style="color:${t.type==='BUY'?'var(--ac)':'var(--red)'};background:${t.type==='BUY'?'var(--acD)':'var(--redD)'}">${t.type==='BUY'?'買':'賣'}</span></div><span style="font-size:10px;color:var(--t3)">${t.date}</span></div><div style="font-size:11px;color:var(--t2);margin-top:3px">${fmtI(t.shares)}股×${fmt(t.price)}</div>${t.profit!=null?`<div style="font-size:11px;font-weight:700;color:${t.profit>=0?'var(--ac)':'var(--red)'}">${t.profit>=0?'+':''}${fmt(t.profit)}</div>`:''}</div>`}
 
-function fillSB(sym,name){searchRes=[];const s=document.getElementById('sbS');if(s)s.value=sym;const n=document.getElementById('sbN');if(n)n.value=name;const sr=document.getElementById('sbSR');if(sr)sr.innerHTML='';fetchOne(sym).then(p=>{if(p?.price){const pr=document.getElementById('sbPr');if(pr)pr.value=p.price}})}
+let _sbTimer=null;
+function autoFillSim(val){
+  clearTimeout(_sbTimer);
+  if(val.length>=2)searchQ(val);
+  if(val.length>=1){
+    _sbTimer=setTimeout(async()=>{
+      const p=await fetchOne(val);
+      if(p&&!p.error){
+        const nm=document.getElementById('sbN');if(nm&&!nm.value)nm.value=p.name||'';
+        const pr=document.getElementById('sbPr');if(pr&&!pr.value)pr.value=p.price||'';
+      }
+    },800);
+  }
+}
+function fillSB(sym,name){searchRes=[];const s=document.getElementById('sbS');if(s)s.value=sym;const n=document.getElementById('sbN');if(n)n.value=name;const sr=document.getElementById('sbSR');if(sr)sr.innerHTML='';fetchOne(sym).then(p=>{if(p&&!p.error){const pr=document.getElementById('sbPr');if(pr)pr.value=p.price;const nm=document.getElementById('sbN');if(nm&&!nm.value)nm.value=p.name||''}})}
 
 // Init
 render();
