@@ -129,7 +129,17 @@ async function fetchOne(sym){
     if(d&&!d.error){prices[d.symbol]=d;lastUp=ts()}return d}catch{return null}
 }
 async function searchQ(q){
-  try{const r=await fetch(W+'?s='+encodeURIComponent(q)+'&action=search');const d=await r.json();searchRes=Array.isArray(d)?d:[];render()}catch{searchRes=[];render()}
+  try{const r=await fetch(W+'?s='+encodeURIComponent(q)+'&action=search');const d=await r.json();searchRes=Array.isArray(d)?d:[];updateSR()}catch{searchRes=[];updateSR()}
+}
+function updateSR(){
+  const targets=['addSR','sbSR'];
+  const fns={addSR:'fillAdd',sbSR:'fillSB'};
+  targets.forEach(id=>{const el=document.getElementById(id);if(el){if(searchRes.length){el.innerHTML=`<div class="sr">${searchRes.map(r=>`<div onclick="${fns[id]}('${r.symbol}','${(r.name||'').replace(/'/g,'')}')""><b>${r.symbol}</b> <span style="color:var(--t2)">${r.name||''}</span></div>`).join('')}</div>`}else{el.innerHTML=''}}});
+  // Also for watch and search pages
+  const wEl=document.getElementById('wSR');
+  if(wEl){if(searchRes.length){wEl.innerHTML=`<div class="sr">${searchRes.map(r=>`<div onclick="searchRes=[];addW('${r.symbol}','${(r.name||'').replace(/'/g,'')}');document.getElementById('wSR').innerHTML=''""><b>${r.symbol}</b> <span style="color:var(--t2)">${r.name||''}</span></div>`).join('')}</div>`}else wEl.innerHTML=''}
+  const sEl=document.getElementById('sSR');
+  if(sEl){if(searchRes.length){sEl.innerHTML=`<div class="sr">${searchRes.map(r=>`<div onclick="searchRes=[];document.getElementById('sSy').value='${r.symbol}';document.getElementById('sSR').innerHTML=''""><b>${r.symbol}</b> <span style="color:var(--t2)">${r.name||''}</span></div>`).join('')}</div>`}else sEl.innerHTML=''}
 }
 function allSyms(){const s=new Set();port.forEach(x=>s.add(norm(x.symbol)));watch.forEach(x=>s.add(norm(x.symbol)));sim.holdings.forEach(x=>s.add(norm(x.symbol)));return[...s]}
 async function refreshAll(){await fetchIdx();const s=allSyms();if(s.length)await fetchBatch(s);render()}
@@ -357,7 +367,7 @@ function vAdd(){
 let _sec='其他';
 function pickSec(el,s){_sec=s;document.querySelectorAll('#addSec button').forEach(b=>{const n=b.textContent;b.style.background=n===s?(SECTORS[n]||'#ddd')+'33':'#111827';b.style.color=n===s?(SECTORS[n]||'#ddd'):'var(--t3)'})}
 function doAdd(){const sym=document.getElementById('addSym')?.value,nm=document.getElementById('addNm')?.value,sh=document.getElementById('addSh')?.value,pr=document.getElementById('addPr')?.value;if(!sym||!sh||!pr){toast('❌ 必填');return}addStock({symbol:sym,name:nm||sym,shares:sh,price:pr,date:document.getElementById('addDt')?.value,note:document.getElementById('addNo')?.value,sector:_sec})}
-function fillAdd(sym,name){searchRes=[];render();setTimeout(()=>{const s=document.getElementById('addSym');if(s)s.value=sym;const n=document.getElementById('addNm');if(n)n.value=name;fetchOne(sym).then(p=>{if(p?.price){const pr=document.getElementById('addPr');if(pr)pr.value=p.price}})},50)}
+function fillAdd(sym,name){searchRes=[];const s=document.getElementById('addSym');if(s)s.value=sym;const n=document.getElementById('addNm');if(n)n.value=name;const sr=document.getElementById('addSR');if(sr)sr.innerHTML='';fetchOne(sym).then(p=>{if(p?.price){const pr=document.getElementById('addPr');if(pr)pr.value=p.price}})}
 
 // ── Detail ──
 function vDetail(){
@@ -382,8 +392,7 @@ function vAI(){return`<div style="padding:0 12px"><button class="back" onclick="
 
 // ── Watch ──
 function vWatch(){
-  let h=`<div style="padding:0 12px"><div style="font-size:16px;font-weight:800;margin-bottom:10px">👁️ 觀察</div><div style="display:flex;gap:6px;margin-bottom:6px"><input class="inp" id="wSy" placeholder="代號" style="flex:1" oninput="if(this.value.length>=2)searchQ(this.value)"><input class="inp" id="wNm" placeholder="名稱" style="flex:1"><button class="btn" style="background:var(--ac);color:#060b14" onclick="doAW()">+</button></div>`;
-  if(searchRes.length)h+=`<div class="sr">${searchRes.map(r=>`<div onclick="searchRes=[];addW('${r.symbol}','${(r.name||'').replace(/'/g,'')}');render()""><b>${r.symbol}</b> <span style="color:var(--t2)">${r.name}</span></div>`).join('')}</div>`;
+  let h=`<div style="padding:0 12px"><div style="font-size:16px;font-weight:800;margin-bottom:10px">👁️ 觀察</div><div style="display:flex;gap:6px;margin-bottom:6px"><input class="inp" id="wSy" placeholder="代號" style="flex:1" oninput="if(this.value.length>=2)searchQ(this.value)"><input class="inp" id="wNm" placeholder="名稱" style="flex:1"><button class="btn" style="background:var(--ac);color:#060b14" onclick="doAW()">+</button></div><div id="wSR"></div>`;
   if(!watch.length)h+=`<div style="text-align:center;padding:30px;color:var(--t3);font-size:12px">空</div>`;
   else watch.forEach(w=>{const p=prices[norm(w.symbol)];h+=`<div class="cd"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:14px;font-weight:700">${w.symbol}</div><div style="font-size:10px;color:var(--t2)">${w.name}</div></div><div style="display:flex;align-items:center;gap:6px"><div style="text-align:right"><div style="font-size:15px;font-weight:800">${p?fmt(p.price):'--'}</div>${p?.changePct!=null?`<div style="font-size:10px;color:${p.changePct>=0?'var(--ac)':'var(--red)'}">${pct(p.changePct)}</div>`:''}</div><button class="btn" style="background:var(--bluD);color:var(--blu);padding:4px 8px;font-size:10px" onclick="runAI('${w.symbol}','${w.name}','full')">🤖</button><button class="btn" style="background:#111827;color:var(--t3);padding:4px 8px;font-size:10px" onclick="delW('${w.symbol}');render()">✕</button></div></div></div>`});
   return h+'</div>';
@@ -392,8 +401,7 @@ function doAW(){const s=document.getElementById('wSy')?.value,n=document.getElem
 
 // ── Search / Quick AI ──
 function vSearch(){
-  let h=`<div style="padding:0 12px"><div style="font-size:16px;font-weight:800;margin-bottom:10px">🔍 分析</div><input class="inp" id="sSy" placeholder="股票代號" style="margin-bottom:4px" oninput="if(this.value.length>=2)searchQ(this.value)">`;
-  if(searchRes.length)h+=`<div class="sr">${searchRes.map(r=>`<div onclick="searchRes=[];render();setTimeout(()=>{document.getElementById('sSy').value='${r.symbol}'},50)"><b>${r.symbol}</b> <span style="color:var(--t2)">${r.name}</span></div>`).join('')}</div>`;
+  let h=`<div style="padding:0 12px"><div style="font-size:16px;font-weight:800;margin-bottom:10px">🔍 分析</div><input class="inp" id="sSy" placeholder="股票代號" style="margin-bottom:4px" oninput="if(this.value.length>=2)searchQ(this.value)"><div id="sSR"></div>`;
   h+=`<div style="display:flex;flex-wrap:wrap;gap:4px;margin:8px 0 10px" id="sT">${ATPL.map((t,i)=>`<button class="btn" style="padding:5px 10px;font-size:10px;background:${i===0?'var(--acD)':'#111827'};color:${i===0?'var(--ac)':'var(--t3)'}" onclick="pickT(this,'${t.id}')">${t.l}</button>`).join('')}</div>
   <button class="btn" style="background:var(--ac);color:#060b14;width:100%;font-size:14px;padding:11px" onclick="doSch()">分析</button>
   <div style="margin-top:16px;font-size:11px;color:var(--t3)"><div style="font-weight:700;margin-bottom:6px;color:var(--t2)">💡 熱門</div>${['2330 台積電','2317 鴻海','0050 元大50','AAPL Apple','NVDA Nvidia'].map(x=>{const[s,...n]=x.split(' ');return`<div style="padding:6px 8px;border-radius:6px;background:var(--card);margin-bottom:4px;cursor:pointer" onclick="document.getElementById('sSy').value='${s}'"><span style="font-weight:700">${s}</span><span style="color:var(--t3);margin-left:6px">${n.join(' ')}</span></div>`}).join('')}</div></div>`;
@@ -434,25 +442,7 @@ function doSS(sym,max){const sh=+document.getElementById('ss_'+sym)?.value,pr=+d
 // Shared
 function txRow(t){return`<div style="padding:8px 10px;border-radius:8px;background:var(--card);border:1px solid var(--bd);margin-bottom:4px"><div style="display:flex;justify-content:space-between"><div><b>${t.symbol}</b> <span class="pl" style="color:${t.type==='BUY'?'var(--ac)':'var(--red)'};background:${t.type==='BUY'?'var(--acD)':'var(--redD)'}">${t.type==='BUY'?'買':'賣'}</span></div><span style="font-size:10px;color:var(--t3)">${t.date}</span></div><div style="font-size:11px;color:var(--t2);margin-top:3px">${fmtI(t.shares)}股×${fmt(t.price)}</div>${t.profit!=null?`<div style="font-size:11px;font-weight:700;color:${t.profit>=0?'var(--ac)':'var(--red)'}">${t.profit>=0?'+':''}${fmt(t.profit)}</div>`:''}</div>`}
 
-// Search result dropdown - used by multiple views
-const _origRender=render;
-const origSearchQ=searchQ;
-
-// Handle search results display after render
-const observer=new MutationObserver(()=>{
-  if(searchRes.length){
-    ['addSR','sbSR'].forEach(id=>{
-      const el=document.getElementById(id);
-      if(el&&searchRes.length){
-        const fn=id==='addSR'?'fillAdd':'fillSB';
-        el.innerHTML=`<div class="sr">${searchRes.map(r=>`<div onclick="${fn}('${r.symbol}','${(r.name||'').replace(/'/g,'')}')""><b>${r.symbol}</b> <span style="color:var(--t2)">${r.name||''}</span></div>`).join('')}</div>`;
-      }
-    });
-  }
-});
-observer.observe(document.getElementById('content'),{childList:true,subtree:true});
-
-function fillSB(sym,name){searchRes=[];render();setTimeout(()=>{const s=document.getElementById('sbS');if(s)s.value=sym;const n=document.getElementById('sbN');if(n)n.value=name;fetchOne(sym).then(p=>{if(p?.price){const pr=document.getElementById('sbPr');if(pr)pr.value=p.price}})},50)}
+function fillSB(sym,name){searchRes=[];const s=document.getElementById('sbS');if(s)s.value=sym;const n=document.getElementById('sbN');if(n)n.value=name;const sr=document.getElementById('sbSR');if(sr)sr.innerHTML='';fetchOne(sym).then(p=>{if(p?.price){const pr=document.getElementById('sbPr');if(pr)pr.value=p.price}})}
 
 // Init
 render();
