@@ -160,7 +160,10 @@ function tv(){return port.reduce((s,x)=>s+(gp(x.symbol)||x.avgCost)*x.shares,0)}
 function rpl(){return txs.filter(t=>t.profit).reduce((s,t)=>s+t.profit,0)}
 
 // ══════ RENDER ══════
+const _inputs=['sSy','addSym','addNm','addSh','addPr','addDt','addNo','wSy','wNm','sbS','sbN','sbSh','sbPr','slSh','slPr','slNo'];
 function render(){
+  const sv={};_inputs.forEach(id=>{const el=document.getElementById(id);if(el)sv[id]=el.value});
+  const af=document.activeElement?.id||null;
   const c=document.getElementById('content');
   document.getElementById('hdSub').textContent=`實盤${port.length} · 模擬${sim.holdings.length} · 觀察${watch.length}${lastUp?' · 🔄'+lastUp:''}`;
 
@@ -180,6 +183,10 @@ function render(){
   else if(view==='search')c.innerHTML=vSearch();
   else if(view==='tx')c.innerHTML=vTx();
   else if(view==='sim')c.innerHTML=vSim();
+
+  // Restore input values
+  Object.entries(sv).forEach(([id,val])=>{const el=document.getElementById(id);if(el&&val)el.value=val});
+  if(af){const el=document.getElementById(af);if(el)el.focus()}
 }
 function nav(v){view=v;sub=null;searchRes=[];render()}
 
